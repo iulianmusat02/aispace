@@ -1,0 +1,3798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiSpace</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='2' width='24' height='28' rx='4' fill='%23faf9f5' stroke='%23D97757' stroke-width='2'/%3E%3Crect x='8' y='0' width='16' height='5' rx='2.5' fill='%23D97757'/%3E%3Cpath d='M9 13l3 3 5-5' fill='none' stroke='%23D97757' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='20' y='12' width='5' height='2' rx='1' fill='%23c4c4c2'/%3E%3Crect x='9' y='20' width='10' height='2' rx='1' fill='%23c4c4c2'/%3E%3Crect x='9' y='25' width='7' height='2' rx='1' fill='%23c4c4c2'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #faf9f5;
+      --bg-secondary: #F5F4EF;
+      --bg-card: #ffffff;
+      --text-primary: #141413;
+      --text-secondary: #5c5c5a;
+      --text-muted: #8c8c8a;
+      --accent: #D97757;
+      --accent-hover: #c4684a;
+      --skill-hard: #D97757;
+      --skill-soft: #6b8f82;
+      --skill-involve: #c9971f;
+      --border: #e5e4df;
+      --border-light: #eeeee9;
+      --shadow: rgba(20, 20, 19, 0.04);
+      --shadow-hover: rgba(20, 20, 19, 0.08);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      padding: 20px 24px;
+      line-height: 1.5;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: var(--text-secondary); }
+
+    .header-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+    }
+
+    .view-toggle {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 8px;
+      margin-left: 16px;
+    }
+
+    .view-toggle button {
+      background: transparent;
+      border: none;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-radius: 6px;
+    }
+
+    .view-toggle button:hover {
+      color: var(--text-primary);
+      background: transparent;
+    }
+
+    .view-toggle button.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .buttons { display: flex; gap: 12px; }
+
+    button {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      background: var(--bg-secondary);
+      border-color: var(--text-muted);
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    #settingsBtn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .dropdown-wrapper {
+      position: relative;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px var(--shadow-hover);
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 50;
+      min-width: 160px;
+    }
+
+    .dropdown-menu button {
+      background: transparent;
+      border: none;
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .dropdown-menu button:hover {
+      background: var(--bg-secondary);
+    }
+
+    button.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ===== TASKS STYLES ===== */
+
+    .board {
+      display: flex;
+      gap: 24px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 24px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Task-urile recurente nu au un flux de status (nu trec dintr-o
+       coloană în alta) — le arătăm ca o grilă simplă de cutii, nu ca
+       board Kanban. */
+    .recurrent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      overflow-y: auto;
+      padding-bottom: 24px;
+      flex: 1;
+      min-height: 0;
+      align-content: start;
+    }
+
+    .recurrent-grid .task-card {
+      cursor: pointer;
+      margin-bottom: 0;
+    }
+
+    .column {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      min-width: 340px;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-height: 100%;
+    }
+
+    .column-header {
+      padding: 16px 18px;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: grab;
+    }
+
+    .column-header:active {
+      cursor: grabbing;
+    }
+
+    .column.dragging-column {
+      opacity: 0.5;
+    }
+
+    .column-drop-indicator {
+      width: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+      margin: 0 -2px;
+      min-height: 100px;
+    }
+
+    .column-header .count {
+      background: var(--bg-card);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .cards {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 12px 12px;
+      min-height: 100px;
+    }
+
+    .cards.drag-over {
+      background: rgba(217, 119, 87, 0.05);
+      border-radius: 8px;
+    }
+
+    .task-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      cursor: grab;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 3px var(--shadow);
+      position: relative;
+    }
+
+    .task-card:hover {
+      box-shadow: 0 4px 12px var(--shadow-hover);
+      border-color: var(--border);
+    }
+
+    .task-card .add-on-hover {
+      display: none;
+    }
+
+    .task-card:hover .add-on-hover {
+      display: block;
+    }
+
+    .section-delete-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+
+    .section-delete-btn:hover {
+      background: var(--bg-secondary);
+      color: #c0392b;
+    }
+
+    .section-delete-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .section-delete-btn:disabled:hover {
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .task-card .delete-btn {
+      display: none;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 6px;
+      font-size: 14px;
+      line-height: 1;
+      border-radius: 4px;
+    }
+
+    .task-card:hover .delete-btn {
+      display: block;
+    }
+
+    .task-card .delete-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--accent);
+    }
+
+    .task-card.dragging {
+      opacity: 0.5;
+      transform: rotate(2deg);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.5;
+      color: var(--text-primary);
+    }
+
+    .task-ticket {
+      display: inline-block;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin-bottom: 3px;
+      letter-spacing: 0.02em;
+    }
+
+    .list-item-ticket {
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin-right: 8px;
+      letter-spacing: 0.02em;
+      flex-shrink: 0;
+    }
+
+    .checkbox {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      min-height: 18px;
+      flex-shrink: 0;
+      border: 2px solid var(--border);
+      border-radius: 5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: var(--bg-card);
+    }
+
+    .checkbox:hover {
+      border-color: var(--accent);
+    }
+
+    .checkbox.checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .checkbox.checked::after {
+      content: '';
+      width: 5px;
+      height: 9px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+      margin-bottom: 2px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 40px;
+      color: var(--text-muted);
+    }
+
+    .empty-state button {
+      font-size: 16px;
+      padding: 14px 28px;
+      background: var(--accent);
+      border: none;
+      color: white;
+    }
+
+    .empty-state button:hover {
+      background: var(--accent-hover);
+    }
+
+    .status-bar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text-primary);
+      color: var(--bg-primary);
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      box-shadow: 0 4px 20px rgba(20, 20, 19, 0.15);
+      z-index: 200;
+    }
+
+    .status-bar.visible { opacity: 1; }
+
+    .add-card {
+      padding: 12px;
+    }
+
+    .add-card button {
+      width: 100%;
+      background: transparent;
+      border: 2px dashed var(--border);
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .add-card button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: transparent;
+    }
+
+    .new-task-input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+    }
+
+    .new-task-input:focus {
+      outline: none;
+    }
+
+    .new-task-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Scrollbar styling */
+    .cards::-webkit-scrollbar,
+    .list-view::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .cards::-webkit-scrollbar-track,
+    .list-view::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .cards::-webkit-scrollbar-thumb,
+    .list-view::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .cards::-webkit-scrollbar-thumb:hover,
+    .list-view::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* List View Styles */
+    .list-view {
+      max-width: 800px;
+      margin: 0 auto;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+    }
+
+    .list-section {
+      margin-bottom: 28px;
+    }
+
+    .list-section.drag-over {
+      background: rgba(217, 119, 87, 0.05);
+      border-radius: 8px;
+      margin: 0 -12px 32px;
+      padding: 0 12px;
+    }
+
+    .list-section-header {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      padding: 4px 0;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .list-section-header .section-title {
+      cursor: pointer;
+    }
+
+    .list-section-header .section-title:hover {
+      color: var(--text-primary);
+    }
+
+    .list-section-header .count {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .list-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      margin-bottom: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      cursor: grab;
+      position: relative;
+      border-radius: 10px;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .list-item:active {
+      cursor: grabbing;
+    }
+
+    .list-item:hover {
+      box-shadow: 0 4px 12px var(--shadow-hover);
+      border-color: var(--border);
+    }
+
+    .list-item.dragging {
+      opacity: 0.5;
+      background: var(--bg-secondary);
+    }
+
+    .list-item .checkbox {
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .list-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .list-item-title {
+      font-size: 15px;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .list-item-title.checked {
+      color: var(--text-muted);
+      text-decoration: line-through;
+    }
+
+    .list-item-note {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      cursor: pointer;
+    }
+
+    .list-item-note:hover {
+      color: var(--text-secondary);
+    }
+
+    .list-item-note.add-note {
+      font-style: italic;
+      display: none;
+    }
+
+    .list-item:hover .list-item-note.add-note {
+      display: block;
+    }
+
+    .list-item-subtasks {
+      margin-top: 8px;
+      padding-left: 2px;
+    }
+
+    .list-item-subtask {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 3px 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .list-item-subtask .checkbox {
+      width: 16px;
+      height: 16px;
+      min-width: 16px;
+      min-height: 16px;
+      margin-top: 1px;
+    }
+
+    .list-item-subtask span {
+      cursor: pointer;
+    }
+
+    .list-item-subtask span:hover {
+      color: var(--text-primary);
+    }
+
+    .list-item-add-subtask {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-style: italic;
+      cursor: pointer;
+      padding: 3px 0;
+      padding-left: 24px;
+      display: none;
+    }
+
+    .list-item:hover .list-item-add-subtask {
+      display: block;
+    }
+
+    .list-item-add-subtask:hover {
+      color: var(--accent);
+    }
+
+    .list-item-section {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .list-item-actions {
+      display: none;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+    }
+
+    .list-item:hover .list-item-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .list-item-actions button {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 6px;
+      font-size: 14px;
+      line-height: 1;
+      border-radius: 4px;
+    }
+
+    .list-item-actions button:hover {
+      background: var(--bg-card);
+      color: var(--accent);
+    }
+
+    .list-drop-indicator {
+      height: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+      margin: 2px -12px;
+    }
+
+    .list-add-section {
+      margin-top: 16px;
+      padding: 16px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .list-add-section:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .quick-add {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+    }
+
+    .quick-add-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      font-size: 15px;
+      color: var(--text-primary);
+      font-family: inherit;
+      outline: none;
+    }
+
+    .quick-add-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .quick-add-section {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+    }
+
+    .quick-add-section:hover {
+      border-color: var(--accent);
+    }
+
+    .section-picker {
+      position: absolute;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px var(--shadow-hover);
+      padding: 4px;
+      z-index: 100;
+    }
+
+    .section-picker button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 13px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+    }
+
+    .section-picker button:hover {
+      background: var(--bg-secondary);
+    }
+
+    /* ===== MEMORY STYLES ===== */
+
+    .memory-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      background: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .memory-tab {
+      background: transparent;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      text-transform: capitalize;
+    }
+
+    .memory-tab:hover { color: var(--text-primary); }
+
+    .memory-tab.active {
+      color: var(--text-primary);
+      background: var(--bg-card);
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .memory-tab .count {
+      background: var(--bg-secondary);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      margin-left: 6px;
+      color: var(--text-muted);
+    }
+
+    .memory-tab.active .count {
+      background: var(--border-light);
+    }
+
+    .memory-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .projects-section + .projects-section {
+      margin-top: 32px;
+    }
+
+    .projects-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin: 0 0 12px;
+    }
+
+    .memory-flat-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .memory-flat-table th {
+      text-align: left;
+      padding: 10px 16px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .memory-flat-table td {
+      padding: 9px 16px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .memory-flat-table td:first-child {
+      color: var(--text-muted);
+      font-weight: 500;
+      white-space: nowrap;
+      width: 120px;
+    }
+
+    .memory-flat-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .memory-flat-table tr:hover td {
+      background: var(--bg-secondary);
+    }
+
+    .memory-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .memory-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px var(--shadow-hover);
+    }
+
+    .memory-card-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-primary);
+    }
+
+    .memory-card-meta {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .memory-card-preview {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+    }
+
+    .memory-card-fields {
+      margin-top: 10px;
+      font-size: 12px;
+    }
+
+    .memory-card-field {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .memory-card-field-label {
+      color: var(--text-muted);
+      min-width: 80px;
+    }
+
+    .memory-card-field-value {
+      color: var(--text-secondary);
+    }
+
+    .task-filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border-light);
+      flex-shrink: 0;
+    }
+
+    .task-filter-bar input[type="text"] {
+      flex: 1;
+      max-width: 320px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .task-filter-bar input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    .task-filter-bar select {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .task-filter-bar #taskFilterClear {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      padding: 6px 8px;
+    }
+
+    .task-filter-bar #taskFilterClear:hover {
+      color: var(--text-primary);
+    }
+
+    .due-quick-panel {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px var(--shadow-hover);
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 50;
+      min-width: 170px;
+    }
+
+    .due-quick-panel button {
+      background: transparent;
+      border: none;
+      text-align: left;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .due-quick-panel button:hover {
+      background: var(--bg-secondary);
+    }
+
+    .due-quick-panel button[data-clear] {
+      color: #c0392b;
+      border-top: 1px solid var(--border-light);
+      margin-top: 4px;
+      padding-top: 8px;
+    }
+
+    .card-due, .list-item-due {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 2px 8px;
+      margin-top: 6px;
+      margin-right: 6px;
+      width: fit-content;
+    }
+
+    .card-due.overdue, .list-item-due.overdue {
+      color: #c0392b;
+      border-color: #c0392b;
+      font-weight: 500;
+    }
+
+    .card-due.due-today, .list-item-due.due-today {
+      color: #b8860b;
+      border-color: #b8860b;
+      font-weight: 500;
+    }
+
+    .card-assignee {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 2px 8px;
+      margin-top: 6px;
+      width: fit-content;
+    }
+
+    .list-item-assignee {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 2px 8px;
+      margin-top: 4px;
+      width: fit-content;
+    }
+
+    .people-badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--border-light);
+      color: var(--text-muted);
+    }
+
+    .people-badge.report {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .people-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .people-chip {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      color: var(--text-secondary);
+    }
+
+    .people-card-1on1 {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .people-card-1on1.stale {
+      color: #c0392b;
+      font-weight: 500;
+    }
+
+    .people-card-goals {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .stat-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 8px 0;
+    }
+
+    .stat-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .stat-bar-label {
+      width: 42px;
+      flex-shrink: 0;
+    }
+
+    .stat-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .stat-bar-fill {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: 4px;
+      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .stat-bar-fill.fill-hard { background: var(--skill-hard); }
+    .stat-bar-fill.fill-soft { background: var(--skill-soft); }
+    .stat-bar-fill.fill-involve { background: var(--skill-involve); }
+
+    .stat-bar-val {
+      width: 22px;
+      flex-shrink: 0;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-secondary);
+    }
+
+    .stat-bars-updated {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin: -4px 0 8px;
+    }
+
+    .people-quick-add {
+      margin-top: 10px;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-light);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .people-quick-add:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .file-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .file-card-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .file-card-header:hover {
+      background: var(--bg-secondary);
+    }
+
+    .file-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .file-card-content {
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      overflow-y: auto;
+      display: none;
+      color: var(--text-secondary);
+    }
+
+    .file-card-content.expanded {
+      display: block;
+    }
+
+    .stats {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 16px 24px;
+      min-width: 100px;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: capitalize;
+      margin-top: 4px;
+    }
+
+    .search-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .add-btn {
+      background: transparent;
+      border: 2px dashed var(--border);
+      color: var(--text-muted);
+      padding: 40px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .add-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .markdown-content {
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .markdown-content h1 { font-size: 1.4em; margin: 16px 0 8px; color: var(--text-primary); }
+    .markdown-content h2 { font-size: 1.2em; margin: 14px 0 6px; color: var(--text-primary); }
+    .markdown-content h3 { font-size: 1.1em; margin: 12px 0 4px; color: var(--text-secondary); }
+    .markdown-content p { margin: 8px 0; }
+    .wiki-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      border-bottom: 1px dashed var(--accent);
+      cursor: pointer;
+    }
+    .wiki-link:hover {
+      border-bottom-style: solid;
+    }
+    .toggle-raw-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 0;
+      text-decoration: underline;
+    }
+    .toggle-raw-btn:hover {
+      color: var(--text-primary);
+    }
+    .markdown-content ul, .markdown-content ol { margin: 8px 0 8px 20px; }
+    .markdown-content li { margin: 4px 0; }
+    .markdown-content code {
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--text-primary);
+    }
+    .markdown-content pre {
+      background: var(--bg-secondary);
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 8px 0;
+      border: 1px solid var(--border-light);
+    }
+    .markdown-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0;
+      font-size: 13px;
+    }
+    .markdown-content th, .markdown-content td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .markdown-content th {
+      background: var(--bg-secondary);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(20, 20, 19, 0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.visible {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 85vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(20, 20, 19, 0.2);
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .modal-close:hover { color: var(--text-primary); }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .form-group textarea {
+      width: 100%;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      line-height: 1.5;
+      min-height: 300px;
+      resize: vertical;
+    }
+
+    .form-group input[type="text"] {
+      width: 100%;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .form-group input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .task-detail-subtask-wrap {
+      margin-bottom: 6px;
+    }
+
+    .task-detail-subtask-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .subtask-result-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 0 0 24px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 12px;
+      transition: color 0.12s ease;
+    }
+
+    .subtask-result-header:hover,
+    .subtask-result-header.open { color: var(--accent); }
+
+    .subtask-result-chevron {
+      font-size: 10px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .subtask-result-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .subtask-row-blocked input[type="text"] {
+      color: #c0392b;
+      font-weight: 600;
+      border-color: #c0392b;
+    }
+
+    .subtask-result-panel {
+      margin: 6px 0 0 24px;
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .subtask-result-panel a { color: var(--accent); }
+
+    .subtask-result-clear {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    .subtask-result-clear:hover { color: var(--text-primary); }
+
+    .task-detail-subtask-row input[type="text"] {
+      flex: 1;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .task-detail-subtask-row input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .task-detail-subtask-row .subtask-delete {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0 4px;
+    }
+
+    .task-detail-subtask-row .subtask-delete:hover { color: var(--text-primary); }
+
+    .task-detail-add-subtask {
+      cursor: pointer;
+      font-style: italic;
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .task-detail-add-subtask:hover { color: var(--text-primary); }
+
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Tab panel containers */
+    .tab-panel {
+      display: none;
+      flex: 1;
+      min-height: 0;
+      flex-direction: column;
+    }
+
+    .tab-panel.active {
+      display: flex;
+    }
+
+    /* Memory panel scrollable area */
+    .memory-content-area {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .memory-content-area::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .memory-content-area::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .memory-content-area::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .memory-content-area::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    .file-card-content::-webkit-scrollbar,
+    .modal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .file-card-content::-webkit-scrollbar-track,
+    .modal-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .file-card-content::-webkit-scrollbar-thumb,
+    .modal-body::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .file-card-content::-webkit-scrollbar-thumb:hover,
+    .modal-body::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* File path display */
+    .file-path {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <svg width="28" height="28" viewBox="0 0 32 32" style="margin-right: 12px; flex-shrink: 0;">
+        <rect x="4" y="2" width="24" height="28" rx="4" fill="#faf9f5" stroke="#D97757" stroke-width="2"/>
+        <rect x="8" y="0" width="16" height="5" rx="2.5" fill="#D97757"/>
+        <path d="M9 13l3 3 5-5" fill="none" stroke="#D97757" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="20" y="12" width="5" height="2" rx="1" fill="#c4c4c2"/>
+        <rect x="9" y="20" width="10" height="2" rx="1" fill="#c4c4c2"/>
+        <rect x="9" y="25" width="7" height="2" rx="1" fill="#c4c4c2"/>
+      </svg>
+      <div>
+        <h1>AiSpace</h1>
+        <div id="filePath" class="file-path"></div>
+      </div>
+      <div class="view-toggle" id="mainTabToggle">
+        <button id="projectsTabBtn">Proiecte</button>
+        <button id="tasksTabBtn" class="active">Task-uri</button>
+        <button id="teamTabBtn">Echipă</button>
+      </div>
+      <div class="view-toggle" id="taskViewToggle">
+        <button id="boardViewBtn" class="active">Panou</button>
+        <button id="listViewBtn">Listă</button>
+      </div>
+    </div>
+    <div class="buttons">
+      <div class="dropdown-wrapper" id="settingsDropdownWrapper">
+        <button id="settingsBtn" title="Setări">⚙️ Setări</button>
+        <div class="dropdown-menu" id="settingsDropdownMenu" style="display: none;">
+          <button type="button" id="connectFolderBtn">📁 Conectează folder</button>
+          <button type="button" data-settings-action="memory">🧠 Memorie</button>
+          <button type="button" data-settings-action="people">👤 Oameni</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TASKS TAB PANEL -->
+  <div class="tab-panel active" id="tasksPanel">
+    <div class="view-toggle" id="taskTypeToggle" style="margin: 12px 16px 0;">
+      <button id="taskTypePunctualBtn" class="active">📌 Punctuale</button>
+      <button id="taskTypeRecurrentBtn">🔁 Recurente</button>
+    </div>
+    <div class="task-filter-bar" id="taskFilterBar" style="display: none;">
+      <input type="text" id="taskSearchInput" placeholder="🔍 Caută task-uri...">
+      <select id="taskAssigneeFilter">
+        <option value="">Toți</option>
+        <option value="__unassigned__">Neasignat</option>
+      </select>
+      <select id="taskSortSelect">
+        <option value="">Sortare: Implicit</option>
+        <option value="due">Sortare: Termen limită</option>
+      </select>
+      <button id="taskFilterClear" style="display: none;">✕ Șterge filtre</button>
+    </div>
+    <div class="list-view" id="listView" style="display: none;"></div>
+    <div class="board" id="board">
+      <div class="empty-state" id="boardEmptyState" style="width: 100%;">
+        <p style="margin-bottom: 24px; font-size: 18px; font-weight: 600; color: var(--text-primary);">Conectează folderul de proiect ca să vezi task-urile</p>
+        <button id="openBtnLarge">📁 Conectează folder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEMORY TAB PANEL -->
+  <div class="tab-panel" id="memoryPanel">
+    <div id="memoryEmptyState" class="empty-state">
+      <p style="margin-bottom: 24px; font-size: 18px; font-weight: 600; color: var(--text-primary);">Conectează folderul de proiect</p>
+      <button id="openMemoryBtnLarge">📁 Conectează folder</button>
+    </div>
+    <div id="memoryMainContent" style="display: none; flex-direction: column; min-height: 0; flex: 1;">
+      <div class="memory-tabs" id="memoryTabsContainer"></div>
+      <div class="memory-content-area">
+        <div id="memoryContentContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PEOPLE TAB PANEL -->
+  <div class="tab-panel" id="peoplePanel">
+    <div id="peopleEmptyState" class="empty-state">
+      <p style="margin-bottom: 24px; font-size: 18px; font-weight: 600; color: var(--text-primary);">Conectează folderul de proiect ca să vezi oamenii</p>
+      <button id="openPeopleBtnLarge">📁 Conectează folder</button>
+    </div>
+    <div id="peopleMainContent" style="display: none; flex-direction: column; min-height: 0; flex: 1;">
+      <div class="memory-content-area">
+        <div id="peopleContainer" class="memory-grid" style="padding: 20px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJECTS TAB PANEL -->
+  <div class="tab-panel" id="projectsPanel">
+    <div id="projectsEmptyState" class="empty-state">
+      <p style="margin-bottom: 24px; font-size: 18px; font-weight: 600; color: var(--text-primary);">Conectează folderul de proiect ca să vezi proiectele</p>
+      <button id="openProjectsBtnLarge">📁 Conectează folder</button>
+    </div>
+    <div id="projectsMainContent" style="display: none; flex-direction: column; min-height: 0; flex: 1;">
+      <div class="search-box" style="margin: 20px 20px 0;">
+        <span style="color: var(--text-muted);">&#128269;</span>
+        <input type="text" placeholder="Caută proiecte..." id="projectsSearch">
+      </div>
+      <div class="memory-content-area">
+        <div id="projectsContainer" style="padding: 20px;"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- TEAM TAB PANEL -->
+  <div class="tab-panel" id="teamPanel">
+    <div id="teamEmptyState" class="empty-state">
+      <p style="margin-bottom: 24px; font-size: 18px; font-weight: 600; color: var(--text-primary);">Conectează folderul de proiect ca să vezi echipa</p>
+      <button id="openTeamBtnLarge">📁 Conectează folder</button>
+    </div>
+    <div id="teamMainContent" style="display: none; flex-direction: column; min-height: 0; flex: 1;">
+      <div class="memory-content-area">
+        <div id="teamContainer" style="padding: 20px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL (shared for memory) -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Detaliu</h3>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer">
+        <button id="modalCancel">Închide</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="status"></div>
+
+  <script>
+    // ===== SHARED STATE =====
+    let activeMainTab = 'tasks'; // 'tasks' or 'memory'
+
+    const statusEl = document.getElementById('status');
+    const filePathEl = document.getElementById('filePath');
+
+    function showStatus(msg) {
+      statusEl.textContent = msg;
+      statusEl.classList.add('visible');
+      setTimeout(() => statusEl.classList.remove('visible'), 2000);
+    }
+
+    // ===== MAIN TAB SWITCHING =====
+    const tasksTabBtn = document.getElementById('tasksTabBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const teamTabBtn = document.getElementById('teamTabBtn');
+    const projectsTabBtn = document.getElementById('projectsTabBtn');
+    const tasksPanel = document.getElementById('tasksPanel');
+    const memoryPanel = document.getElementById('memoryPanel');
+    const peoplePanel = document.getElementById('peoplePanel');
+    const projectsPanel = document.getElementById('projectsPanel');
+    const teamPanel = document.getElementById('teamPanel');
+    const taskViewToggle = document.getElementById('taskViewToggle');
+    const taskTypeToggle = document.getElementById('taskTypeToggle');
+    const taskTypePunctualBtn = document.getElementById('taskTypePunctualBtn');
+    const taskTypeRecurrentBtn = document.getElementById('taskTypeRecurrentBtn');
+    const connectFolderBtn = document.getElementById('connectFolderBtn');
+
+    // 'punctual' = task obișnuit, cu un singur rezultat (opusul unui task
+    // recurent, care e o instrucțiune permanentă pe un interval).
+    let taskTypeFilter = 'punctual';
+
+    // ===== URL ROUTING (hash-based — funcționează și cu file://, fără server) =====
+    // Fiecare tab/subtab își are propria rută, ca la refresh browser-ul să
+    // revină exact unde a rămas userul, nu la ecranul implicit.
+    function currentRoute() {
+      let path = '/' + activeMainTab;
+      if (activeMainTab === 'tasks') path += '/' + taskTypeFilter;
+      return path;
+    }
+
+    function updateHash() {
+      const target = '#' + currentRoute();
+      if (location.hash !== target) history.replaceState(null, '', target);
+    }
+
+    function switchMainTab(tab, { skipHash } = {}) {
+      activeMainTab = tab;
+
+      tasksTabBtn.classList.toggle('active', tab === 'tasks');
+      // 'memory' și 'people' stau acum sub dropdown-ul Setări, deci
+      // butonul trigger reflectă dacă oricare din ele e activ.
+      settingsBtn.classList.toggle('active', tab === 'memory' || tab === 'people');
+      teamTabBtn.classList.toggle('active', tab === 'team');
+      projectsTabBtn.classList.toggle('active', tab === 'projects');
+
+      tasksPanel.classList.toggle('active', tab === 'tasks');
+      memoryPanel.classList.toggle('active', tab === 'memory');
+      peoplePanel.classList.toggle('active', tab === 'people');
+      projectsPanel.classList.toggle('active', tab === 'projects');
+      teamPanel.classList.toggle('active', tab === 'team');
+
+      // Toggle-ul Panou/Listă n-are sens pe Recurente (nu au coloane de
+      // status), deci apare doar pe Task-uri > Punctuale.
+      taskViewToggle.style.display = (tab === 'tasks' && taskTypeFilter === 'punctual') ? 'flex' : 'none';
+      taskTypeToggle.style.display = tab === 'tasks' ? 'flex' : 'none';
+
+      // Conectarea e o singură acțiune, o dată, din Settings — fiecare tab
+      // (Tasks, People, Projects, Team) se încarcă din același folder
+      // conectat, deci nu mai există buton de conectare per-tab.
+
+      // Update file path display
+      filePathEl.textContent = memoryDirHandle ? memoryDirHandle.name : '';
+
+      if (tab === 'tasks') renderTasks();
+      if (tab === 'people') renderPeople();
+      if (tab === 'projects') renderProjects();
+      if (tab === 'team') renderTeam();
+
+      if (!skipHash) updateHash();
+    }
+
+    function setTaskTypeFilter(type, { skipHash } = {}) {
+      taskTypeFilter = type;
+      taskTypePunctualBtn.classList.toggle('active', type === 'punctual');
+      taskTypeRecurrentBtn.classList.toggle('active', type === 'recurrent');
+      taskViewToggle.style.display = type === 'punctual' ? 'flex' : 'none';
+      renderTasks();
+      if (!skipHash) updateHash();
+    }
+
+    tasksTabBtn.addEventListener('click', () => switchMainTab('tasks'));
+    teamTabBtn.addEventListener('click', () => switchMainTab('team'));
+    projectsTabBtn.addEventListener('click', () => switchMainTab('projects'));
+    taskTypePunctualBtn.addEventListener('click', () => setTaskTypeFilter('punctual'));
+    taskTypeRecurrentBtn.addEventListener('click', () => setTaskTypeFilter('recurrent'));
+
+    // La refresh sau navigare back/forward, citește ruta din URL și
+    // restaurează exact tab-ul (+ subtab-ul de tasks) de dinainte.
+    function applyRouteFromHash() {
+      const parts = (location.hash || '').replace(/^#\/?/, '').split('/').filter(Boolean);
+      const knownTabs = ['tasks', 'memory', 'people', 'projects', 'team'];
+      const tab = knownTabs.includes(parts[0]) ? parts[0] : 'tasks';
+      if (tab === 'tasks' && (parts[1] === 'recurrent' || parts[1] === 'punctual')) {
+        taskTypeFilter = parts[1];
+        taskTypePunctualBtn.classList.toggle('active', parts[1] === 'punctual');
+        taskTypeRecurrentBtn.classList.toggle('active', parts[1] === 'recurrent');
+      }
+      switchMainTab(tab, { skipHash: true });
+      updateHash();
+    }
+    window.addEventListener('hashchange', applyRouteFromHash);
+
+    // Settings is now a dropdown trigger, not a direct tab switch.
+    const settingsDropdownMenu = document.getElementById('settingsDropdownMenu');
+    settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const showing = settingsDropdownMenu.style.display !== 'none';
+      settingsDropdownMenu.style.display = showing ? 'none' : 'flex';
+    });
+    settingsDropdownMenu.querySelectorAll('[data-settings-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        settingsDropdownMenu.style.display = 'none';
+        switchMainTab(btn.dataset.settingsAction === 'people' ? 'people' : 'memory');
+      });
+    });
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('settingsDropdownWrapper').contains(e.target)) {
+        settingsDropdownMenu.style.display = 'none';
+      }
+    });
+
+    document.getElementById('taskSearchInput').addEventListener('input', (e) => {
+      taskSearchQuery = e.target.value.trim();
+      renderTasks();
+    });
+    document.getElementById('taskAssigneeFilter').addEventListener('change', (e) => {
+      taskAssigneeFilterValue = e.target.value;
+      renderTasks();
+    });
+    document.getElementById('taskSortSelect').addEventListener('change', (e) => {
+      taskSortBy = e.target.value;
+      renderTasks();
+    });
+    document.getElementById('taskFilterClear').addEventListener('click', () => {
+      taskSearchQuery = '';
+      taskAssigneeFilterValue = '';
+      document.getElementById('taskSearchInput').value = '';
+      document.getElementById('taskAssigneeFilter').value = '';
+      renderTasks();
+    });
+
+    // ============================================================
+    // ===== PERSISTED FILE HANDLES (IndexedDB) =====
+    // ============================================================
+    // Chrome keeps File System Access permissions granted only for the
+    // current browsing session; after a full browser restart they drop
+    // back to 'prompt'. So we persist the handles themselves and, on
+    // reload, re-request permission on the user's next click instead of
+    // making them re-navigate the file picker each time.
+
+    const HANDLE_DB_NAME = 'productivity-dashboard';
+    const HANDLE_STORE = 'handles';
+
+    function idbOpen() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(HANDLE_DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(HANDLE_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbSetHandle(key, handle) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(HANDLE_STORE, 'readwrite');
+        tx.objectStore(HANDLE_STORE).put(handle, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function idbGetHandle(key) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(HANDLE_STORE, 'readonly');
+        const req = tx.objectStore(HANDLE_STORE).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    let pendingMemoryHandle = null;
+
+    // ============================================================
+    // ===== TASKS FUNCTIONALITY =====
+    // ============================================================
+
+    let taskFileHandle = null;
+    let taskFileName = '';
+    let sections = [];
+    let tasks = {};
+    let currentView = 'board';
+    let taskSearchQuery = '';
+    let taskAssigneeFilterValue = '';
+    let taskSortBy = '';
+
+    const board = document.getElementById('board');
+    const listView = document.getElementById('listView');
+    const listViewBtn = document.getElementById('listViewBtn');
+    const boardViewBtn = document.getElementById('boardViewBtn');
+
+    function taskSectionId(name) {
+      return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+
+    function parseTaskMarkdown(content) {
+      const resultSections = [];
+      const resultTasks = {};
+      let currentSection = null;
+      let currentSectionId = null;
+
+      const lines = content.split('\n');
+      let currentTask = null;
+
+      for (const line of lines) {
+        const headerMatch = line.match(/^## \*{0,2}(.+?)\*{0,2}$/);
+        if (headerMatch) {
+          if (currentTask && currentSectionId) {
+            resultTasks[currentSectionId].push(currentTask);
+            currentTask = null;
+          }
+
+          const sectionName = headerMatch[1].trim();
+          currentSectionId = taskSectionId(sectionName);
+          currentSection = sectionName;
+
+          if (!resultTasks[currentSectionId]) {
+            resultSections.push({ id: currentSectionId, name: sectionName });
+            resultTasks[currentSectionId] = [];
+          }
+        } else if (currentSectionId && line.match(/^- \[[ xX]\]/)) {
+          if (currentTask) {
+            resultTasks[currentSectionId].push(currentTask);
+          }
+          const checked = line.match(/\[[xX]\]/) !== null;
+          let text = line.replace(/^- \[[ xX]\]\s*/, '');
+
+          // Trailing metadata tags — (@Assignee), (due: YYYY-MM-DD), (id: AS-7),
+          // (project: slug), (recurrent: schedule) — can appear in any
+          // order, so strip them from the end in a loop.
+          let assignee = '';
+          let due = '';
+          let ticket = '';
+          let project = '';
+          let recurrent = '';
+          // [^()] (not .+?) is load-bearing: an unrestricted .+? can
+          // backtrack across a later tag's own parens and swallow it
+          // whole (e.g. "@Name) (id: AS-7" all as the assignee), which
+          // silently ate ticket ids on every reload. Names/dates/ids
+          // never legitimately contain parens, so this is safe.
+          const trailingTag = /\s*\((?:@(?<a>[^()]+?)|due:\s*(?<d>\d{4}-\d{2}-\d{2})|project:\s*(?<pr>[^()]+?)|recurrent:\s*(?<rc>[^()]+?)|id:\s*(?<t>[A-Za-z]+-\d+))\)\s*$/;
+          let tagMatch;
+          while ((tagMatch = text.match(trailingTag))) {
+            if (tagMatch.groups.a) assignee = tagMatch.groups.a.trim();
+            if (tagMatch.groups.d) due = tagMatch.groups.d;
+            if (tagMatch.groups.pr) project = tagMatch.groups.pr.trim();
+            if (tagMatch.groups.rc) recurrent = tagMatch.groups.rc.trim();
+            if (tagMatch.groups.t) ticket = tagMatch.groups.t;
+            text = text.slice(0, tagMatch.index);
+          }
+
+          let title = text;
+          let note = '';
+
+          const boldMatch = text.match(/^\*\*(.+?)\*\*(.*)$/);
+          if (boldMatch) {
+            title = boldMatch[1];
+            note = boldMatch[2].replace(/^\s*-\s*/, '').trim();
+          }
+
+          currentTask = {
+            id: Date.now() + Math.random(),
+            ticket,
+            title,
+            note,
+            checked,
+            assignee,
+            due,
+            recurrent,
+            subtasks: [],
+            section: currentSectionId
+          };
+        } else if (currentTask && currentTask.subtasks.length > 0 && line.match(/^ {4,}- .+/)) {
+          // 4+ space indent: a result/suggestion nested under the last
+          // subtask (e.g. what got produced when someone worked the
+          // subtask) — not a subtask of its own, so it doesn't get a
+          // checkbox row on the board; it renders as an expandable panel.
+          const text = line.replace(/^\s+- /, '');
+          const lastSub = currentTask.subtasks[currentTask.subtasks.length - 1];
+          lastSub.result = lastSub.result ? lastSub.result + '\n' + text : text;
+        } else if (currentTask && line.match(/^ {1,3}- (\[[ xX]\]\s*)?.+/)) {
+          const checked = line.match(/\[[xX]\]/) !== null;
+          const text = line.replace(/^\s+- (\[[ xX]\]\s*)?/, '');
+          currentTask.subtasks.push({ text, checked, result: '' });
+        }
+      }
+
+      if (currentTask && currentSectionId) {
+        resultTasks[currentSectionId].push(currentTask);
+      }
+
+      return { sections: resultSections, tasks: resultTasks };
+    }
+
+    function todayStr() {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString().slice(0, 10);
+    }
+
+    function dueStatusClass(due, checked) {
+      if (!due || checked) return '';
+      const today = todayStr();
+      if (due < today) return 'overdue';
+      if (due === today) return 'due-today';
+      return '';
+    }
+
+    function formatDueLabel(due) {
+      if (!due) return '';
+      const [y, m, d] = due.split('-').map(Number);
+      const dueDate = new Date(y, m - 1, d);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffDays = Math.round((dueDate - today) / 86400000);
+
+      const weekdays = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+
+      let label;
+      if (diffDays === 0) label = 'Azi';
+      else if (diffDays === 1) label = 'Mâine';
+      else if (diffDays === 2) label = 'Poimâine';
+      else if (diffDays === -1) label = 'Ieri';
+      else if (diffDays > 2 && diffDays <= 7) label = weekdays[dueDate.getDay()];
+      else {
+        const dd = String(d).padStart(2, '0');
+        const mm = String(m).padStart(2, '0');
+        const yearSuffix = y !== today.getFullYear() ? `-${y}` : '';
+        label = `${dd}-${mm}${yearSuffix}`;
+      }
+      return `📅 ${label}`;
+    }
+
+    // Doar afișaj — niciun buton de ștergere/asignare/due date, fără
+    // drag-and-drop. Click deschide detaliul (tot read-only).
+    function createCard(task) {
+      const card = document.createElement('div');
+      card.className = 'task-card';
+      card.dataset.id = task.id;
+
+      let html = `
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <div style="flex: 1; min-width: 0;">
+            ${task.ticket ? `<span class="task-ticket">${escapeHtml(task.ticket)}</span>` : ''}
+            <div class="card-title">${escapeHtml(task.title)}</div>
+          </div>
+        </div>
+      `;
+
+      if (task.due || task.assignee) {
+        html += `<div style="display: flex; flex-wrap: wrap; margin-left: 30px;">`;
+        if (task.due) {
+          const dueClass = dueStatusClass(task.due, task.checked);
+          html += `<div class="card-due ${dueClass}">${formatDueLabel(task.due)}</div>`;
+        }
+        if (task.assignee) {
+          html += `<div class="card-assignee">👤 ${escapeHtml(task.assignee)}</div>`;
+        }
+        html += `</div>`;
+      }
+
+      card.innerHTML = html;
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', () => openTaskDetailModal(task));
+
+      return card;
+    }
+
+    // Dashboard-ul e read-only prin design: singura sursă de adevăr pentru
+    // date e sesiunea de Claude Code, care editează fișierele .md direct.
+    // Coloana e deci doar afișaj — fără redenumire, ștergere, drag-and-drop
+    // sau adăugare de task-uri din UI.
+    function createColumn(id, title, items) {
+      const col = document.createElement('div');
+      col.className = 'column';
+      col.innerHTML = `
+        <div class="column-header">
+          <span class="column-title">${escapeHtml(title)}</span>
+          <span class="count">${items.length}</span>
+        </div>
+        <div class="cards" data-column="${id}"></div>
+      `;
+
+      const cardsContainer = col.querySelector('.cards');
+      items.forEach(task => { cardsContainer.appendChild(createCard(task)); });
+
+      return col;
+    }
+
+    let lastModified = 0;
+    let watchInterval = null;
+
+    // Dashboard-ul nu scrie niciodată în fișiere — singura sursă de adevăr
+    // e sesiunea de Claude Code. Acest watcher doar CITEȘTE periodic
+    // TASKS.md, ca să reflecte aproape live orice schimbare făcută de
+    // Claude, fără să reîncarci manual pagina.
+    async function checkForExternalChanges() {
+      if (!taskFileHandle) return;
+      try {
+        const file = await taskFileHandle.getFile();
+        if (file.lastModified > lastModified) {
+          lastModified = file.lastModified;
+          const content = await file.text();
+          const result = parseTaskMarkdown(content);
+          sections = result.sections;
+          tasks = result.tasks;
+          ensureTicketNumbers();
+          renderTasks();
+          refreshOpenTaskDetailModal();
+          showStatus('Reîncărcat');
+        }
+      } catch (e) { showStatus('Eroare la monitorizare: ' + e.message); }
+    }
+
+    function startWatching() {
+      if (watchInterval) clearInterval(watchInterval);
+      watchInterval = setInterval(checkForExternalChanges, 1000);
+    }
+
+    function stopWatching() {
+      if (watchInterval) { clearInterval(watchInterval); watchInterval = null; }
+    }
+
+    // ===== TASK SEARCH / ASSIGNEE FILTER =====
+    // Filtering only affects what's rendered — `tasks` (the source of
+    // truth that gets serialized to TASKS.md) is never touched here.
+
+    function taskMatchesFilter(task) {
+      const isRecurrent = !!task.recurrent;
+      if (taskTypeFilter === 'recurrent' && !isRecurrent) return false;
+      if (taskTypeFilter === 'punctual' && isRecurrent) return false;
+      if (taskAssigneeFilterValue) {
+        if (taskAssigneeFilterValue === '__unassigned__') {
+          if (task.assignee) return false;
+        } else if (task.assignee !== taskAssigneeFilterValue) {
+          return false;
+        }
+      }
+      if (taskSearchQuery) {
+        const q = taskSearchQuery.toLowerCase();
+        const haystack = [task.ticket, task.title, task.note, ...(task.subtasks || []).map(s => s.text)]
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    }
+
+    // Sorting is purely visual — returns a new array so the underlying
+    // `tasks[section.id]` order (and drag-and-drop / file order) is
+    // untouched whenever sort is switched back to "Implicit".
+    function applyTaskSort(list) {
+      if (taskSortBy !== 'due') return list;
+      return [...list].sort((a, b) => {
+        if (!a.due && !b.due) return 0;
+        if (!a.due) return 1;
+        if (!b.due) return -1;
+        return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+      });
+    }
+
+    function getTaskAssignees() {
+      const set = new Set();
+      Object.values(tasks).forEach(arr => (arr || []).forEach(t => { if (t.assignee) set.add(t.assignee); }));
+      return [...set].sort((a, b) => a.localeCompare(b));
+    }
+
+    function refreshTaskFilterBar() {
+      const bar = document.getElementById('taskFilterBar');
+      const select = document.getElementById('taskAssigneeFilter');
+      const clearBtn = document.getElementById('taskFilterClear');
+      if (!bar || !select) return;
+
+      bar.style.display = taskFileHandle ? 'flex' : 'none';
+
+      const current = select.value;
+      const assignees = getTaskAssignees();
+      select.innerHTML = '<option value="">Toți</option><option value="__unassigned__">Neasignat</option>' +
+        assignees.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+      if ([...select.options].some(o => o.value === current)) select.value = current;
+
+      if (clearBtn) clearBtn.style.display = (taskSearchQuery || taskAssigneeFilterValue) ? 'inline-block' : 'none';
+    }
+
+    function renderTasks() {
+      refreshTaskFilterBar();
+      // Task-urile recurente nu au coloane de status (nu "avansează" —
+      // rulează pe un interval fix), deci ignoră toggle-ul Panou/Listă și
+      // le arată mereu ca o grilă de cutii simple, în același container
+      // ca Panoul. renderTasks() e sursa unică pentru care container
+      // (board vs listView) e vizibil — switchTaskView nu mai duplică asta.
+      if (taskTypeFilter === 'recurrent') {
+        listView.style.display = 'none';
+        board.style.display = 'flex';
+        renderRecurrentBoxes();
+      } else if (currentView === 'board') {
+        listView.style.display = 'none';
+        board.style.display = 'flex';
+        renderBoard();
+      } else {
+        listView.style.display = 'block';
+        board.style.display = 'none';
+        renderList();
+      }
+    }
+
+    // Construit cu metode DOM (nu innerHTML) ca titlul/nota/schedule-ul —
+    // text liber din TASKS.md — să nu fie niciodată interpretat ca markup.
+    function renderRecurrentBoxes() {
+      board.innerHTML = '';
+
+      const items = [];
+      Object.values(tasks).forEach(list => {
+        (list || []).forEach(t => { if (taskMatchesFilter(t)) items.push(t); });
+      });
+
+      const grid = document.createElement('div');
+      grid.className = 'recurrent-grid';
+
+      if (items.length === 0) {
+        const empty = document.createElement('p');
+        empty.style.color = 'var(--text-muted)';
+        empty.style.padding = '8px';
+        empty.textContent = 'Niciun task recurent momentan. Deschide un task punctual și bifează „Recurent" ca să apară aici (ex. „verifică emailurile în fiecare zi la 10:00 și spune-mi ce e important").';
+        grid.appendChild(empty);
+        board.appendChild(grid);
+        return;
+      }
+
+      items.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'task-card';
+
+        const topRow = document.createElement('div');
+        topRow.style.display = 'flex';
+        topRow.style.justifyContent = 'space-between';
+        topRow.style.alignItems = 'flex-start';
+        topRow.style.gap = '12px';
+
+        const titleBlock = document.createElement('div');
+        if (t.ticket) {
+          const ticketEl = document.createElement('span');
+          ticketEl.className = 'task-ticket';
+          ticketEl.textContent = t.ticket;
+          titleBlock.appendChild(ticketEl);
+        }
+        const titleEl = document.createElement('div');
+        titleEl.className = 'card-title';
+        titleEl.textContent = t.title;
+        titleBlock.appendChild(titleEl);
+        topRow.appendChild(titleBlock);
+
+        card.appendChild(topRow);
+
+        const scheduleEl = document.createElement('div');
+        scheduleEl.style.marginTop = '8px';
+        scheduleEl.style.color = 'var(--text-secondary)';
+        scheduleEl.textContent = '🔁 ' + t.recurrent;
+        card.appendChild(scheduleEl);
+
+        if (t.assignee) {
+          const assigneeEl = document.createElement('div');
+          assigneeEl.style.marginTop = '4px';
+          assigneeEl.style.color = 'var(--text-muted)';
+          assigneeEl.textContent = '👤 ' + t.assignee;
+          card.appendChild(assigneeEl);
+        }
+
+        if (t.note) {
+          const noteEl = document.createElement('div');
+          noteEl.style.marginTop = '4px';
+          noteEl.style.color = 'var(--text-muted)';
+          noteEl.textContent = t.note;
+          card.appendChild(noteEl);
+        }
+
+        card.addEventListener('click', () => openTaskDetailModal(t));
+        grid.appendChild(card);
+      });
+
+      board.appendChild(grid);
+    }
+
+    function renderBoard() {
+      board.innerHTML = '';
+      sections.forEach(section => {
+        const sectionTasks = applyTaskSort((tasks[section.id] || []).filter(taskMatchesFilter));
+        board.appendChild(createColumn(section.id, section.name, sectionTasks));
+      });
+    }
+
+    // Read-only: fără quick-add, fără redenumire/ștergere de secțiuni,
+    // fără drag-and-drop, fără editare de titlu/notă/subtask-uri/due/assignee.
+    function renderList() {
+      listView.innerHTML = '';
+
+      sections.forEach(section => {
+        const sectionTasks = applyTaskSort((tasks[section.id] || []).filter(taskMatchesFilter));
+        const sectionEl = document.createElement('div');
+        sectionEl.className = 'list-section';
+        sectionEl.dataset.sectionId = section.id;
+
+        const header = document.createElement('div');
+        header.className = 'list-section-header';
+        header.innerHTML = `
+          <span class="section-title">${escapeHtml(section.name)}</span>
+          <span class="count">${sectionTasks.length}</span>
+        `;
+        sectionEl.appendChild(header);
+
+        const tasksContainer = document.createElement('div');
+        tasksContainer.className = 'list-tasks-container';
+        tasksContainer.dataset.sectionId = section.id;
+
+        sectionTasks.forEach(task => {
+          tasksContainer.appendChild(createListItem(task, section));
+        });
+
+        sectionEl.appendChild(tasksContainer);
+        listView.appendChild(sectionEl);
+      });
+    }
+
+    function createListItem(task, section) {
+      const item = document.createElement('div');
+      item.className = 'list-item';
+      item.dataset.taskId = task.id;
+      item.style.cursor = 'pointer';
+      item.addEventListener('click', () => openTaskDetailModal(task));
+
+      const content = document.createElement('div');
+      content.className = 'list-item-content';
+
+      const titleRow = document.createElement('div');
+      titleRow.style.cssText = 'display: flex; align-items: center;';
+
+      if (task.ticket) {
+        const ticketEl = document.createElement('span');
+        ticketEl.className = 'list-item-ticket';
+        ticketEl.textContent = task.ticket;
+        titleRow.appendChild(ticketEl);
+      }
+
+      const title = document.createElement('div');
+      title.className = `list-item-title ${task.checked ? 'checked' : ''}`;
+      title.textContent = task.title;
+      titleRow.appendChild(title);
+      content.appendChild(titleRow);
+
+      if (task.note) {
+        const note = document.createElement('div');
+        note.className = 'list-item-note';
+        note.textContent = task.note;
+        content.appendChild(note);
+      }
+
+      if (task.due || task.assignee) {
+        const metaRow = document.createElement('div');
+        metaRow.style.cssText = 'display: flex; flex-wrap: wrap;';
+
+        if (task.due) {
+          const dueEl = document.createElement('div');
+          dueEl.className = `list-item-due ${dueStatusClass(task.due, task.checked)}`;
+          dueEl.textContent = formatDueLabel(task.due);
+          metaRow.appendChild(dueEl);
+        }
+
+        if (task.assignee) {
+          const assigneeEl = document.createElement('div');
+          assigneeEl.className = 'list-item-assignee';
+          assigneeEl.textContent = `👤 ${task.assignee}`;
+          metaRow.appendChild(assigneeEl);
+        }
+
+        content.appendChild(metaRow);
+      }
+
+      if (task.subtasks && task.subtasks.length > 0) {
+        const subtasksContainer = document.createElement('div');
+        subtasksContainer.className = 'list-item-subtasks';
+
+        task.subtasks.forEach(st => {
+          const subtaskEl = document.createElement('div');
+          subtaskEl.className = 'list-item-subtask';
+
+          const stCheckbox = document.createElement('span');
+          stCheckbox.className = `checkbox ${st.checked ? 'checked' : ''}`;
+          stCheckbox.style.pointerEvents = 'none';
+
+          const stText = document.createElement('span');
+          stText.textContent = st.text;
+          if (st.checked) {
+            stText.style.textDecoration = 'line-through';
+            stText.style.color = 'var(--text-muted)';
+          }
+
+          subtaskEl.appendChild(stCheckbox);
+          subtaskEl.appendChild(stText);
+          subtasksContainer.appendChild(subtaskEl);
+        });
+
+        content.appendChild(subtasksContainer);
+      }
+
+      item.appendChild(content);
+
+      return item;
+    }
+
+    function switchTaskView(view) {
+      currentView = view;
+      // Vizibilitatea board vs. listView e decisă în renderTasks() (ține
+      // cont și de taskTypeFilter) — aici doar reflectăm starea butoanelor.
+      listViewBtn.classList.toggle('active', view === 'list');
+      boardViewBtn.classList.toggle('active', view !== 'list');
+      renderTasks();
+    }
+
+    listViewBtn.addEventListener('click', () => switchTaskView('list'));
+    boardViewBtn.addEventListener('click', () => switchTaskView('board'));
+
+    // ===== TICKET NUMBERS (AS-1, AS-2, ...) =====
+    // Stored in markdown as a trailing (id: AS-N) tag. Numbering is
+    // derived from the highest existing number in the file, so it keeps
+    // incrementing correctly across reloads instead of resetting.
+    const TICKET_PREFIX = 'AS';
+    let nextTicketNumber = 1;
+
+    function recalcNextTicketNumber() {
+      let max = 0;
+      const re = new RegExp(`^${TICKET_PREFIX}-(\\d+)$`);
+      Object.values(tasks).forEach(arr => (arr || []).forEach(t => {
+        const m = t.ticket && t.ticket.match(re);
+        if (m) max = Math.max(max, parseInt(m[1], 10));
+      }));
+      nextTicketNumber = max + 1;
+    }
+
+    function nextTicket() {
+      return `${TICKET_PREFIX}-${nextTicketNumber++}`;
+    }
+
+    // Assigns an in-memory ticket number to any task that doesn't have one
+    // (only for display — nothing gets written back, the dashboard never
+    // saves).
+    function ensureTicketNumbers() {
+      recalcNextTicketNumber();
+      sections.forEach(section => {
+        (tasks[section.id] || []).forEach(t => {
+          if (!t.ticket) { t.ticket = nextTicket(); }
+        });
+      });
+    }
+
+    async function loadTaskFile(handle) {
+      taskFileHandle = handle;
+      const file = await taskFileHandle.getFile();
+      const content = await file.text();
+      lastModified = file.lastModified;
+      const result = parseTaskMarkdown(content);
+      sections = result.sections;
+      tasks = result.tasks;
+      ensureTicketNumbers();
+      switchTaskView('board');
+      startWatching();
+      taskFileName = file.name;
+      filePathEl.textContent = file.name;
+    }
+
+    // Tasks nu mai are picker propriu de fișier — TASKS.md se încarcă
+    // automat din loadMemoryDirectory() de mai jos, din subdirectorul
+    // my-context/ al folderului de proiect conectat.
+    document.getElementById('openBtnLarge')?.addEventListener('click', loadMemoryDirectory);
+
+    // ============================================================
+    // ===== MEMORY FUNCTIONALITY =====
+    // ============================================================
+
+    let memoryDirHandle = null;
+    let memoryData = {
+      claudeMd: null,
+      memoryFiles: [],
+      memoryDirs: {}
+    };
+
+    const memoryEmptyState = document.getElementById('memoryEmptyState');
+    const memoryMainContent = document.getElementById('memoryMainContent');
+    const memoryTabsContainer = document.getElementById('memoryTabsContainer');
+    const memoryContentContainer = document.getElementById('memoryContentContainer');
+    const modalOverlay = document.getElementById('modalOverlay');
+
+    const peopleEmptyState = document.getElementById('peopleEmptyState');
+    const peopleMainContent = document.getElementById('peopleMainContent');
+    const peopleContainer = document.getElementById('peopleContainer');
+
+    const projectsEmptyState = document.getElementById('projectsEmptyState');
+    const projectsMainContent = document.getElementById('projectsMainContent');
+    const projectsContainer = document.getElementById('projectsContainer');
+
+    const teamEmptyState = document.getElementById('teamEmptyState');
+    const teamMainContent = document.getElementById('teamMainContent');
+    const teamContainer = document.getElementById('teamContainer');
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Strips wiki-link/bold markdown syntax from short field values (e.g.
+    // "[[mos]]" -> "mos", "**x**" -> "x") so card fields read as plain text.
+    function cleanInlineMarkdown(text) {
+      return String(text || '')
+        .replace(/\[\[(.+?)\]\]/g, '$1')
+        .replace(/\*\*(.+?)\*\*/g, '$1');
+    }
+
+    function parseMemoryMarkdown(content) {
+      const parsed = {
+        title: '',
+        fields: {},
+        sections: {},
+        tables: [],
+        rawContent: content
+      };
+
+      const lines = content.split('\n');
+      let currentSection = '_intro';
+      parsed.sections[currentSection] = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (line.match(/^# /)) {
+          parsed.title = line.replace(/^# /, '').trim();
+          continue;
+        }
+
+        if (line.match(/^## /)) {
+          currentSection = line.replace(/^## /, '').trim();
+          parsed.sections[currentSection] = [];
+          continue;
+        }
+
+        const kvMatch = line.match(/^-?\s*\*\*(.+?):\*\*\s*(.*)$/);
+        if (kvMatch) {
+          parsed.fields[kvMatch[1]] = kvMatch[2];
+          continue;
+        }
+
+        parsed.sections[currentSection].push(line);
+      }
+
+      for (const key in parsed.sections) {
+        parsed.sections[key] = parsed.sections[key].join('\n').trim();
+      }
+
+      const tableRegex = /\|(.+)\|\n\|[-| ]+\|\n((?:\|.+\|\n?)+)/g;
+      let match;
+      while ((match = tableRegex.exec(content)) !== null) {
+        const headers = match[1].split('|').map(h => h.trim()).filter(h => h);
+        const rowLines = match[2].trim().split('\n');
+        const rows = rowLines.map(row => row.split('|').map(c => c.trim()).filter(c => c));
+        parsed.tables.push({ headers, rows });
+      }
+
+      return parsed;
+    }
+
+    // Parses a "## Stats" section body (e.g. "- Actualizat: 2026-08-21\n-
+    // Hardskills: 3 | Softskills: 2.5 | Involvement: 3") into numeric
+    // values for the mini bar-chart rendered on people cards and modals.
+    function parseStatsSection(text) {
+      if (!text) return null;
+      const m = text.match(/Hardskills:\s*([\d.]+)\s*\|\s*Softskills:\s*([\d.]+)\s*\|\s*Involvement:\s*([\d.]+)/i);
+      if (!m) return null;
+      const dateMatch = text.match(/Actualizat:\s*([\d-]+)/i);
+      return {
+        hard: parseFloat(m[1]),
+        soft: parseFloat(m[2]),
+        involve: parseFloat(m[3]),
+        updated: dateMatch ? dateMatch[1] : null
+      };
+    }
+
+    function buildStatBarsHtml(stats, maxScale = 5) {
+      const rows = [
+        ['Hard', stats.hard, 'fill-hard'],
+        ['Soft', stats.soft, 'fill-soft'],
+        ['Involv.', stats.involve, 'fill-involve']
+      ];
+      const rowsHtml = rows.map(([label, val, cls]) => `
+        <div class="stat-bar-row">
+          <span class="stat-bar-label">${label}</span>
+          <span class="stat-bar-track"><span class="stat-bar-fill ${cls}" data-target="${(val / maxScale) * 100}"></span></span>
+          <span class="stat-bar-val">${val.toFixed(1)}</span>
+        </div>`).join('');
+      const updatedHtml = stats.updated ? `<div class="stat-bars-updated">Actualizat ${escapeHtml(stats.updated)}</div>` : '';
+      return `<div class="stat-bars">${rowsHtml}</div>${updatedHtml}`;
+    }
+
+    // Bars start at width 0 in the markup and animate to their target
+    // width once inserted, so re-renders (sort, search, modal open) read
+    // as a small "loading" moment instead of popping in fully drawn.
+    function animateStatBars(scope) {
+      scope.querySelectorAll('.stat-bar-fill[data-target]').forEach(el => {
+        const target = el.getAttribute('data-target');
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          el.style.width = target + '%';
+        }));
+      });
+    }
+
+    function getPreview(content, maxLength = 150) {
+      let preview = content
+        .replace(/^#+ .+$/gm, '')
+        .replace(/\*\*(.+?):\*\*.*/g, '')
+        .replace(/\|.+\|/g, '')
+        .replace(/[-=]{3,}/g, '')
+        .replace(/\[\[(.+?)\]\]/g, '$1')
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/^\s*-\s+/gm, '')
+        .trim()
+        .substring(0, maxLength);
+      if (content.length > maxLength) preview += '...';
+      return preview;
+    }
+
+    function getDisplayName(filename) {
+      return filename
+        .replace('.md', '')
+        .split(/[-_]/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    }
+
+    // Resolves a [[wiki-link]] slug (e.g. "elena-man") to the memory file
+    // it names, searching every connected my-context/ subdirectory. Used to
+    // turn [[links]] in rendered markdown into clickable navigation.
+    function findMemoryFileBySlug(slug) {
+      const dirs = (memoryData && memoryData.memoryDirs) || {};
+      for (const dirName of Object.keys(dirs)) {
+        const file = (dirs[dirName] || []).find(f => f.name === slug + '.md');
+        if (file) {
+          return {
+            dirName,
+            fileName: file.name,
+            title: (file.parsed && file.parsed.title) || getDisplayName(file.name)
+          };
+        }
+      }
+      return null;
+    }
+
+    async function loadMemoryFromDirHandle(handle) {
+      memoryDirHandle = handle;
+
+      memoryData = { claudeMd: null, memoryFiles: [], memoryDirs: {} };
+
+      try {
+        const claudeFileHandle = await memoryDirHandle.getFileHandle('CLAUDE.md');
+        const file = await claudeFileHandle.getFile();
+        memoryData.claudeMd = { content: await file.text(), fileHandle: claudeFileHandle };
+      } catch (e) { console.log('No CLAUDE.md found'); }
+
+      try {
+        // People can point the picker at either the project root (which
+        // has CLAUDE.md + a my-context/ subfolder) or straight at
+        // my-context/ itself — both are natural readings of "select your
+        // project folder". Try the subfolder first; if it's not there,
+        // assume the picked folder IS my-context/ already.
+        let memoryDir;
+        try {
+          memoryDir = await memoryDirHandle.getDirectoryHandle('my-context');
+        } catch (e) {
+          memoryDir = memoryDirHandle;
+        }
+        for await (const entry of memoryDir.values()) {
+          if (entry.kind === 'file' && entry.name.endsWith('.md')) {
+            const file = await entry.getFile();
+            memoryData.memoryFiles.push({
+              name: entry.name,
+              content: await file.text(),
+              fileHandle: entry
+            });
+          } else if (entry.kind === 'directory') {
+            memoryData.memoryDirs[entry.name] = [];
+            const subDirHandle = entry;
+            for await (const subEntry of subDirHandle.values()) {
+              if (subEntry.kind === 'file' && subEntry.name.endsWith('.md')) {
+                const file = await subEntry.getFile();
+                const content = await file.text();
+                memoryData.memoryDirs[entry.name].push({
+                  name: subEntry.name,
+                  content: content,
+                  fileHandle: subEntry,
+                  dirHandle: subDirHandle,
+                  parsed: parseMemoryMarkdown(content)
+                });
+              }
+            }
+          }
+        }
+
+        // One folder pick unlocks everything, including Tasks — TASKS.md
+        // lives inside the same my-context/ folder, so load it as the
+        // active task file too instead of asking for it separately.
+        try {
+          // No { create: true } here on purpose — creating TASKS.md is
+          // the onboarding flow's job (from templates/TASKS.template.md,
+          // with the right section headers). Just connecting the folder
+          // shouldn't silently drop an empty file that then makes
+          // onboarding think TASKS.md already exists.
+          const tasksFileHandle = await memoryDir.getFileHandle('TASKS.md');
+          await loadTaskFile(tasksFileHandle);
+        } catch (e) { console.log('No my-context/TASKS.md found yet', e); }
+      } catch (e) { console.log('No my-context/ directory found'); }
+
+      renderMemory();
+      memoryEmptyState.style.display = 'none';
+      memoryMainContent.style.display = 'flex';
+      filePathEl.textContent = memoryDirHandle.name;
+
+      renderPeople();
+      renderProjects();
+      renderTeam();
+    }
+
+    async function loadMemoryDirectory() {
+      try {
+        if (pendingMemoryHandle) {
+          const handle = pendingMemoryHandle;
+          pendingMemoryHandle = null;
+          connectFolderBtn.textContent = '📁 Conectează folder';
+          const largeBtn = document.getElementById('openMemoryBtnLarge');
+          if (largeBtn) largeBtn.textContent = 'Selectează folder';
+          const boardLargeBtn = document.getElementById('openBtnLarge');
+          if (boardLargeBtn) boardLargeBtn.textContent = 'Selectează folder';
+          if (await handle.requestPermission({ mode: 'read' }) === 'granted') {
+            await loadMemoryFromDirHandle(handle);
+            showStatus('Reconectat la ' + memoryDirHandle.name);
+            return;
+          }
+          // Permission denied on the reconnect attempt — fall through to a fresh picker.
+        }
+        const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+        await loadMemoryFromDirHandle(dirHandle);
+        idbSetHandle('memoryDir', dirHandle).catch(() => {});
+        showStatus('Încărcat din ' + memoryDirHandle.name);
+
+      } catch (e) {
+        if (e.name !== 'AbortError') { showStatus('Eroare: ' + e.message); }
+      }
+    }
+
+    // ============================================================
+    // ===== PEOPLE MANAGEMENT =====
+    // ============================================================
+    // Reads my-context/people/*.md (already loaded as part of the Memory
+    // folder connection) and renders a structured, sortable view on
+    // top of the same files — direct reports (marked with a "Manager"
+    // field) get 1:1 / goals tracking, everyone else gets a compact
+    // colleague card. Editing still goes through the shared file modal.
+
+    function renderPeople() {
+      if (!peopleContainer) return;
+
+      if (!memoryDirHandle) {
+        peopleEmptyState.style.display = 'block';
+        peopleMainContent.style.display = 'none';
+        return;
+      }
+      peopleEmptyState.style.display = 'none';
+      peopleMainContent.style.display = 'flex';
+
+      const files = (memoryData.memoryDirs && memoryData.memoryDirs['people']) || [];
+      if (files.length === 0) {
+        peopleContainer.innerHTML = '<p style="color: var(--text-muted); padding: 8px;">Niciun fișier găsit în my-context/people/.</p>';
+        return;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const people = files.map(file => {
+        const p = file.parsed || parseMemoryMarkdown(file.content);
+        const name = p.title || getDisplayName(file.name);
+        const role = p.fields['Rol'] || '';
+        const email = p.fields['Email'] || '';
+        const isDirectReport = !!p.fields['Manager'];
+        const worksOnRaw = p.fields['Lucrează pe'] || '';
+        const projectChips = (worksOnRaw.match(/\[\[(.+?)\]\]/g) || []).map(m => m.replace(/\[\[|\]\]/g, ''));
+        const contextActiv = p.sections['Context activ'] || '';
+        const stats = parseStatsSection(p.sections['Stats']);
+
+        const oneOnOnesRaw = p.sections['1:1s'] || '';
+        const dates = oneOnOnesRaw.split('\n')
+          .map(l => l.match(/^-\s*(\d{4}-\d{2}-\d{2})/))
+          .filter(Boolean)
+          .map(m => m[1])
+          .sort();
+        const lastOneOnOne = dates.length ? dates[dates.length - 1] : null;
+        const daysSince = lastOneOnOne ? Math.floor((today - new Date(lastOneOnOne)) / 86400000) : null;
+
+        const goalsRaw = p.sections['Goals'] || '';
+        const goalLines = goalsRaw.split('\n').filter(l => l.match(/^-\s*\[[ xX]\]/));
+        const doneGoals = goalLines.filter(l => l.match(/^-\s*\[[xX]\]/)).length;
+
+        return { file, name, role, email, isDirectReport, projectChips, contextActiv, stats, lastOneOnOne, daysSince, goalLines, doneGoals };
+      });
+
+      people.sort((a, b) => {
+        if (a.isDirectReport !== b.isDirectReport) return a.isDirectReport ? -1 : 1;
+        if (a.isDirectReport) {
+          const da = a.daysSince === null ? Infinity : a.daysSince;
+          const db = b.daysSince === null ? Infinity : b.daysSince;
+          if (da !== db) return db - da;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
+      let html = '';
+      for (const person of people) {
+        let extraHtml = '';
+        if (person.isDirectReport) {
+          const stale = person.daysSince === null || person.daysSince > 21;
+          const label = person.lastOneOnOne
+            ? `Ultimul 1:1: ${person.lastOneOnOne} (${person.daysSince} zile)`
+            : 'Ultimul 1:1: niciodată';
+          extraHtml += `<div class="people-card-1on1${stale ? ' stale' : ''}">${escapeHtml(label)}</div>`;
+          if (person.goalLines.length > 0) {
+            extraHtml += `<div class="people-card-goals">${person.doneGoals}/${person.goalLines.length} obiective</div>`;
+          }
+        }
+
+        const chipsHtml = person.projectChips.map(c => `<span class="people-chip">${escapeHtml(c)}</span>`).join('');
+        const statsHtml = person.stats ? buildStatBarsHtml(person.stats) : '';
+
+        html += `
+          <div class="memory-card people-card" data-file-name="${escapeHtml(person.file.name)}">
+            <div class="memory-card-title">
+              ${escapeHtml(person.name)}
+              <span class="people-badge${person.isDirectReport ? ' report' : ''}">${person.isDirectReport ? 'Direct report' : 'Coleg'}</span>
+            </div>
+            <div class="memory-card-meta">${escapeHtml(person.role)}</div>
+            ${person.email ? `<div class="memory-card-meta"><a href="mailto:${escapeHtml(person.email)}" data-action="mailto" style="color: inherit;">✉️ ${escapeHtml(person.email)}</a></div>` : ''}
+            ${chipsHtml ? `<div class="people-chips">${chipsHtml}</div>` : ''}
+            ${statsHtml}
+            <div class="memory-card-preview">${escapeHtml(getPreview(person.contextActiv, 120))}</div>
+            ${extraHtml}
+          </div>
+        `;
+      }
+
+      peopleContainer.innerHTML = html;
+      animateStatBars(peopleContainer);
+
+      peopleContainer.querySelectorAll('.people-card').forEach(cardEl => {
+        cardEl.addEventListener('click', (e) => {
+          if (e.target.closest('[data-action="mailto"]')) return;
+          openFileModal('people', cardEl.dataset.fileName);
+        });
+      });
+    }
+
+    // ============================================================
+    // ===== PROJECTS (top-level shortcut into my-context/projects/) =====
+    // ============================================================
+    // Same data source as Settings → Projects, just surfaced as its own
+    // main tab for quick access, mirroring how People works.
+
+    function buildProjectCardHtml(file) {
+      const p = file.parsed || parseMemoryMarkdown(file.content);
+      const title = p.title || getDisplayName(file.name);
+
+      let fieldsHtml = '';
+      const fieldEntries = Object.entries(p.fields).slice(0, 3);
+      if (fieldEntries.length > 0) {
+        fieldsHtml = '<div class="memory-card-fields">';
+        for (const [key, value] of fieldEntries) {
+          fieldsHtml += `
+            <div class="memory-card-field">
+              <span class="memory-card-field-label">${escapeHtml(key)}</span>
+              <span class="memory-card-field-value">${escapeHtml(cleanInlineMarkdown(value))}</span>
+            </div>
+          `;
+        }
+        fieldsHtml += '</div>';
+      }
+
+      let preview = '';
+      for (const [sectionName, sectionContent] of Object.entries(p.sections)) {
+        if (sectionContent && sectionName !== '_intro') {
+          preview = getPreview(sectionContent, 120);
+          break;
+        }
+      }
+      if (!preview) preview = getPreview(p.rawContent, 120);
+
+      return `
+        <div class="memory-card" data-file-name="${escapeHtml(file.name)}" data-search="${escapeHtml((title + ' ' + JSON.stringify(p.fields) + ' ' + p.rawContent).toLowerCase())}">
+          <div class="memory-card-title">${escapeHtml(title)}</div>
+          ${fieldsHtml}
+          <div class="memory-card-preview">${escapeHtml(preview)}</div>
+        </div>
+      `;
+    }
+
+    function renderProjects() {
+      if (!projectsContainer) return;
+
+      if (!memoryDirHandle) {
+        projectsEmptyState.style.display = 'block';
+        projectsMainContent.style.display = 'none';
+        return;
+      }
+      projectsEmptyState.style.display = 'none';
+      projectsMainContent.style.display = 'flex';
+
+      const files = (memoryData.memoryDirs && memoryData.memoryDirs['projects']) || [];
+      if (files.length === 0) {
+        projectsContainer.innerHTML = '<p style="color: var(--text-muted); padding: 8px;">Niciun fișier găsit în my-context/projects/.</p>';
+        return;
+      }
+
+      // A file is a "module" if it declares who it belongs to via
+      // "Parte din"; everything else is a top-level big project.
+      const bigProjects = files.filter(f => !((f.parsed || {}).fields || {})['Parte din']);
+      const modules = files.filter(f => ((f.parsed || {}).fields || {})['Parte din']);
+
+      let html = '';
+      if (bigProjects.length > 0) {
+        html += `
+          <div class="projects-section">
+            <h3 class="projects-section-title">Proiecte mari</h3>
+            <div class="memory-grid">${bigProjects.map(buildProjectCardHtml).join('')}</div>
+          </div>
+        `;
+      }
+      if (modules.length > 0) {
+        html += `
+          <div class="projects-section">
+            <h3 class="projects-section-title">Module</h3>
+            <div class="memory-grid">${modules.map(buildProjectCardHtml).join('')}</div>
+          </div>
+        `;
+      }
+
+      projectsContainer.innerHTML = html;
+
+      projectsContainer.querySelectorAll('.memory-card').forEach(cardEl => {
+        cardEl.addEventListener('click', () => openFileModal('projects', cardEl.dataset.fileName));
+      });
+    }
+
+    function filterProjects(searchTerm) {
+      const search = searchTerm.toLowerCase();
+      projectsContainer.querySelectorAll('.memory-card').forEach(cardEl => {
+        const searchData = cardEl.dataset.search || '';
+        cardEl.style.display = (!search || searchData.includes(search)) ? '' : 'none';
+      });
+    }
+
+    // ============================================================
+    // ===== TEAM (status ledger) =====
+    // ============================================================
+    // Reads each direct report's "Rol", "Lucrează pe" and "Context activ"
+    // fields and shows them as a scannable table — role, what they're on,
+    // and their latest known status, flagging anything they're blocked on.
+
+    function renderTeam() {
+      if (!teamContainer) return;
+
+      if (!memoryDirHandle) {
+        teamEmptyState.style.display = 'block';
+        teamMainContent.style.display = 'none';
+        return;
+      }
+      teamEmptyState.style.display = 'none';
+      teamMainContent.style.display = 'flex';
+
+      const files = (memoryData.memoryDirs && memoryData.memoryDirs['people']) || [];
+      const rows = files
+        .map(file => {
+          const p = file.parsed || parseMemoryMarkdown(file.content);
+          const worksOnRaw = p.fields['Lucrează pe'] || '';
+          const projectChips = (worksOnRaw.match(/\[\[(.+?)\]\]/g) || []).map(m => m.replace(/\[\[|\]\]/g, ''));
+          const contextActiv = (p.sections['Context activ'] || '').trim();
+          const statusLines = contextActiv.split('\n').map(l => l.replace(/^-\s*/, '').trim()).filter(Boolean);
+          const isBlocked = /blocat|blocked/i.test(contextActiv);
+          return {
+            file,
+            name: p.title || getDisplayName(file.name),
+            role: p.fields['Rol'] || '',
+            email: p.fields['Email'] || '',
+            isDirectReport: !!p.fields['Manager'],
+            projectChips,
+            statusLines,
+            isBlocked
+          };
+        });
+
+      if (rows.length === 0) {
+        teamContainer.innerHTML = '<p style="color: var(--text-muted); padding: 8px;">Niciun coleg găsit în my-context/people/.</p>';
+        return;
+      }
+
+      // Cei blocați pe ceva ies în față — sunt cei mai probabil să aibă
+      // nevoie de o acțiune din partea mea.
+      rows.sort((a, b) => {
+        if (a.isBlocked !== b.isBlocked) return a.isBlocked ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      let html = `
+        <div style="overflow-x: auto;">
+        <table class="memory-flat-table">
+          <thead>
+            <tr>
+              <th>Nume</th>
+              <th>Rol</th>
+              <th>Email</th>
+              <th>Lucrează pe</th>
+              <th>Status curent</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      rows.forEach(r => {
+        const chipsHtml = r.projectChips.map(c => `<span class="people-chip">${escapeHtml(c)}</span>`).join('');
+        const statusHtml = r.statusLines.length
+          ? `<ul style="margin:0; padding-left:16px;">${r.statusLines.map(l => `<li${/blocat|blocked/i.test(l) ? ' style="color:#ad4a3a; font-weight:500;"' : ''}>${escapeHtml(l)}</li>`).join('')}</ul>`
+          : '<span style="color: var(--text-muted);">Fără context activ notat.</span>';
+        const emailHtml = r.email
+          ? `<a href="mailto:${escapeHtml(r.email)}" data-action="mailto" style="color: inherit;">✉️ ${escapeHtml(r.email)}</a>`
+          : '<span style="color: var(--text-muted);">—</span>';
+
+        html += `
+          <tr class="team-row" data-file-name="${escapeHtml(r.file.name)}" style="cursor: pointer;">
+            <td>${escapeHtml(r.name)}</td>
+            <td>${escapeHtml(r.role)}</td>
+            <td>${emailHtml}</td>
+            <td>${chipsHtml || '<span style="color: var(--text-muted);">—</span>'}</td>
+            <td style="max-width: 480px;">${statusHtml}</td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table></div>';
+      teamContainer.innerHTML = html;
+
+      teamContainer.querySelectorAll('.team-row').forEach(row => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('[data-action="mailto"]')) return;
+          openFileModal('people', row.dataset.fileName);
+        });
+      });
+    }
+
+    function renderMemory() {
+      renderMemoryTabs();
+      renderMemoryContent();
+    }
+
+    function renderMemoryTabs() {
+      let html = '';
+
+      if (memoryData.claudeMd) {
+        html += `<button class="memory-tab active" data-tab="overview">Prezentare generală</button>`;
+      }
+
+      for (const file of memoryData.memoryFiles) {
+        const name = file.name.replace('.md', '');
+        html += `<button class="memory-tab${!memoryData.claudeMd && memoryData.memoryFiles[0] === file ? ' active' : ''}" data-tab="file-${escapeHtml(name)}">${escapeHtml(name)}</button>`;
+      }
+
+      for (const dirName of Object.keys(memoryData.memoryDirs).sort()) {
+        const files = memoryData.memoryDirs[dirName];
+        let count;
+        if (dirName === 'context') {
+          count = 0;
+          for (const file of files) {
+            const p = file.parsed;
+            count += Object.keys(p.fields).length;
+            for (const table of p.tables) {
+              count += table.rows.length;
+            }
+            for (const [sName, sContent] of Object.entries(p.sections)) {
+              if (sContent && sName !== '_intro') {
+                count += sContent.split('\n').filter(l => l.trim() && !l.trim().startsWith('|')).length;
+              }
+            }
+          }
+        } else {
+          count = files.length;
+        }
+        html += `<button class="memory-tab" data-tab="dir-${escapeHtml(dirName)}">${escapeHtml(dirName)} <span class="count">${count}</span></button>`;
+      }
+
+      memoryTabsContainer.innerHTML = html;
+
+      memoryTabsContainer.querySelectorAll('.memory-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          memoryTabsContainer.querySelectorAll('.memory-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          renderMemoryContent();
+        });
+      });
+    }
+
+    function renderMemoryContent() {
+      const activeTab = memoryTabsContainer.querySelector('.memory-tab.active');
+      if (!activeTab) return;
+
+      const tabId = activeTab.dataset.tab;
+
+      if (tabId === 'overview') { renderMemoryOverview(); }
+      else if (tabId.startsWith('file-')) {
+        const fileName = tabId.replace('file-', '') + '.md';
+        renderMemoryFile(fileName);
+      } else if (tabId.startsWith('dir-')) {
+        const dirName = tabId.replace('dir-', '');
+        renderMemoryDirectory(dirName);
+      }
+    }
+
+    function renderMemoryOverview() {
+      if (!memoryData.claudeMd) return;
+
+      let statsHtml = '<div class="stats">';
+      for (const [dirName, files] of Object.entries(memoryData.memoryDirs)) {
+        let count;
+        if (dirName === 'context') {
+          count = 0;
+          for (const file of files) {
+            const p = file.parsed;
+            count += Object.keys(p.fields).length;
+            for (const table of p.tables) { count += table.rows.length; }
+            for (const [sName, sContent] of Object.entries(p.sections)) {
+              if (sContent && sName !== '_intro') {
+                count += sContent.split('\n').filter(l => l.trim() && !l.trim().startsWith('|')).length;
+              }
+            }
+          }
+        } else {
+          count = files.length;
+        }
+        statsHtml += `
+          <div class="stat">
+            <div class="stat-value">${count}</div>
+            <div class="stat-label">${escapeHtml(dirName)}</div>
+          </div>
+        `;
+      }
+      statsHtml += '</div>';
+
+      const claudeContent = renderMarkdownToHtml(memoryData.claudeMd.content);
+
+      memoryContentContainer.innerHTML = `
+        ${statsHtml}
+        <div class="file-card">
+          <div class="file-card-header" onclick="this.nextElementSibling.classList.toggle('expanded'); this.querySelector('.toggle').textContent = this.nextElementSibling.classList.contains('expanded') ? '\u2212' : '+'">
+            <span class="file-card-title">CLAUDE.md</span>
+            <span class="toggle" style="color: var(--text-muted);">&minus;</span>
+          </div>
+          <div class="file-card-content expanded markdown-content">${claudeContent}</div>
+        </div>
+      `;
+    }
+
+    function renderMemoryFile(fileName) {
+      const file = memoryData.memoryFiles.find(f => f.name === fileName);
+      if (!file) return;
+
+      const content = renderMarkdownToHtml(file.content);
+
+      memoryContentContainer.innerHTML = `
+        <div class="file-card">
+          <div class="file-card-header">
+            <span class="file-card-title">${escapeHtml(fileName)}</span>
+          </div>
+          <div class="file-card-content expanded markdown-content">${content}</div>
+        </div>
+      `;
+    }
+
+    function renderMemoryDirectory(dirName) {
+      const files = memoryData.memoryDirs[dirName] || [];
+
+      // Context directory uses flat list view
+      if (dirName === 'context') {
+        renderMemoryDirectoryFlat(dirName, files);
+        return;
+      }
+
+      // All other directories use card grid view
+      let html = `
+        <div class="search-box">
+          <span style="color: var(--text-muted);">&#128269;</span>
+          <input type="text" placeholder="Caută în ${escapeHtml(dirName)}..." id="dirSearch">
+        </div>
+        <div class="memory-grid" id="dirGrid">
+      `;
+
+      for (const file of files) {
+        const p = file.parsed;
+        const title = p.title || getDisplayName(file.name);
+
+        let fieldsHtml = '';
+        const fieldEntries = Object.entries(p.fields).slice(0, 3);
+        if (fieldEntries.length > 0) {
+          fieldsHtml = '<div class="memory-card-fields">';
+          for (const [key, value] of fieldEntries) {
+            fieldsHtml += `
+              <div class="memory-card-field">
+                <span class="memory-card-field-label">${escapeHtml(key)}</span>
+                <span class="memory-card-field-value">${escapeHtml(cleanInlineMarkdown(value))}</span>
+              </div>
+            `;
+          }
+          fieldsHtml += '</div>';
+        }
+
+        let preview = '';
+        for (const [sectionName, sectionContent] of Object.entries(p.sections)) {
+          if (sectionContent && sectionName !== '_intro') {
+            preview = getPreview(sectionContent, 100);
+            break;
+          }
+        }
+        if (!preview) preview = getPreview(p.rawContent, 100);
+
+        html += `
+          <div class="memory-card" data-file-name="${escapeHtml(file.name)}" data-search="${escapeHtml((title + ' ' + JSON.stringify(p.fields) + ' ' + p.rawContent).toLowerCase())}">
+            <div class="memory-card-title">${escapeHtml(title)}</div>
+            ${fieldsHtml}
+            <div class="memory-card-preview">${escapeHtml(preview)}</div>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+
+      memoryContentContainer.innerHTML = html;
+
+      document.getElementById('dirSearch').addEventListener('input', (e) => filterMemoryDirectory(dirName, e.target.value));
+      memoryContentContainer.querySelectorAll('.memory-card').forEach(cardEl => {
+        cardEl.addEventListener('click', () => openFileModal(dirName, cardEl.dataset.fileName));
+      });
+    }
+
+    function renderMemoryDirectoryFlat(dirName, files) {
+      let html = `
+        <div class="search-box">
+          <span style="color: var(--text-muted);">&#128269;</span>
+          <input type="text" placeholder="Caută în ${escapeHtml(dirName)}..." id="dirSearch">
+        </div>
+        <div id="dirGrid">
+      `;
+
+      for (const file of files) {
+        const p = file.parsed;
+
+        // Render fields as a key-value table
+        const fieldEntries = Object.entries(p.fields);
+        if (fieldEntries.length > 0) {
+          html += `<div class="file-card" style="margin-bottom: 16px;"><table class="memory-flat-table"><tbody>`;
+          for (const [key, value] of fieldEntries) {
+            html += `<tr data-search="${escapeHtml((key + ' ' + value).toLowerCase())}"><td>${escapeHtml(key)}</td><td>${escapeHtml(value)}</td></tr>`;
+          }
+          html += `</tbody></table></div>`;
+        }
+
+        // Render parsed tables (teams, tools, etc.) as proper HTML tables
+        for (const table of p.tables) {
+          html += `<div class="file-card" style="margin-bottom: 16px;"><table class="memory-flat-table"><thead><tr>`;
+          for (const h of table.headers) {
+            html += `<th>${escapeHtml(h)}</th>`;
+          }
+          html += `</tr></thead><tbody>`;
+          for (const row of table.rows) {
+            const searchData = row.join(' ').toLowerCase();
+            html += `<tr data-search="${escapeHtml(searchData)}">`;
+            for (const cell of row) {
+              html += `<td>${escapeHtml(cell)}</td>`;
+            }
+            html += `</tr>`;
+          }
+          html += `</tbody></table></div>`;
+        }
+
+        // Render non-table section content as list items
+        for (const [sectionName, sectionContent] of Object.entries(p.sections)) {
+          if (!sectionContent || sectionName === '_intro') continue;
+          const lines = sectionContent.split('\n').filter(l => l.trim() && !l.trim().startsWith('|'));
+          if (lines.length === 0) continue;
+          html += `<div class="file-card" style="margin-bottom: 16px;"><table class="memory-flat-table"><thead><tr><th colspan="2">${escapeHtml(sectionName)}</th></tr></thead><tbody>`;
+          for (const line of lines) {
+            const cleanLine = line.replace(/^[-*]\s*/, '').replace(/\*\*(.+?)\*\*/g, '$1').trim();
+            if (!cleanLine) continue;
+            html += `<tr data-search="${escapeHtml((sectionName + ' ' + cleanLine).toLowerCase())}"><td colspan="2">${escapeHtml(cleanLine)}</td></tr>`;
+          }
+          html += `</tbody></table></div>`;
+        }
+      }
+
+      html += `</div>`;
+      memoryContentContainer.innerHTML = html;
+
+      document.getElementById('dirSearch').addEventListener('input', (e) => filterMemoryDirectory(dirName, e.target.value));
+    }
+
+    function filterMemoryDirectory(dirName, searchTerm) {
+      const grid = document.getElementById('dirGrid');
+      const items = grid.querySelectorAll('.memory-card, tr[data-search]');
+      const search = searchTerm.toLowerCase();
+      items.forEach(item => {
+        const searchData = item.dataset.search || '';
+        item.style.display = (!search || searchData.includes(search)) ? '' : 'none';
+      });
+    }
+
+    function renderMarkdownToHtml(md) {
+      let html = escapeHtml(md);
+
+      // [[wiki-links]] become clickable navigation when the target file
+      // is found in a connected my-context/ subdirectory; otherwise they
+      // render as plain text (broken link, nothing to jump to).
+      html = html.replace(/\[\[(.+?)\]\]/g, (m, slug) => {
+        const target = findMemoryFileBySlug(slug.trim());
+        if (target) {
+          return `<a href="#" class="wiki-link" data-dir="${escapeHtml(target.dirName)}" data-file="${escapeHtml(target.fileName)}">${escapeHtml(target.title)}</a>`;
+        }
+        return escapeHtml(slug.trim());
+      });
+
+      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+      html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      html = html.replace(/```[\s\S]*?```/g, match => {
+        const code = match.replace(/```\w*\n?/g, '');
+        return '<pre><code>' + code + '</code></pre>';
+      });
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+      html = html.replace(/(\|.+\|\n\|[-| ]+\|\n(?:\|.+\|\n?)+)/g, match => {
+        const lines = match.trim().split('\n');
+        const headers = lines[0].split('|').filter(c => c.trim());
+        const rows = lines.slice(2).map(row => row.split('|').filter(c => c.trim()));
+        let table = '<table><thead><tr>';
+        headers.forEach(h => table += `<th>${h.trim()}</th>`);
+        table += '</tr></thead><tbody>';
+        rows.forEach(row => {
+          table += '<tr>';
+          row.forEach(cell => table += `<td>${cell.trim()}</td>`);
+          table += '</tr>';
+        });
+        table += '</tbody></table>';
+        return table;
+      });
+      html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+      html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+      html = html.replace(/^(?!<[hupol]|<li|<table|<pre)(.+)$/gm, '<p>$1</p>');
+      html = html.replace(/<p><\/p>/g, '');
+      html = html.replace(/<p>\s*<\/p>/g, '');
+
+      return html;
+    }
+
+    // Modal functions
+    function openFileModal(dirName, fileName) {
+      const files = memoryData.memoryDirs[dirName];
+      const file = files.find(f => f.name === fileName);
+      if (!file) return;
+
+      const displayTitle = (file.parsed && file.parsed.title) || getDisplayName(fileName);
+      document.getElementById('modalTitle').textContent = displayTitle;
+      document.getElementById('modalBody').innerHTML = `
+        <div class="markdown-content">
+          ${renderMarkdownToHtml(file.content)}
+        </div>
+      `;
+
+      document.getElementById('modalCancel').textContent = 'Închide';
+      modalOverlay.classList.add('visible');
+      modalOverlay.dataset.type = 'dirFile';
+      modalOverlay.dataset.dirName = dirName;
+      modalOverlay.dataset.fileName = fileName;
+
+      const stats = file.parsed && parseStatsSection(file.parsed.sections['Stats']);
+      if (stats) {
+        const modalBody = document.getElementById('modalBody');
+        const statsHeading = Array.from(modalBody.querySelectorAll('h2')).find(h => h.textContent.trim() === 'Stats');
+        if (statsHeading) {
+          const list = statsHeading.nextElementSibling;
+          if (list && list.tagName === 'UL') {
+            list.outerHTML = buildStatBarsHtml(stats);
+          } else {
+            statsHeading.insertAdjacentHTML('afterend', buildStatBarsHtml(stats));
+          }
+          animateStatBars(modalBody);
+        }
+      }
+
+      document.getElementById('modalBody').querySelectorAll('.wiki-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          openFileModal(link.dataset.dir, link.dataset.file);
+        });
+      });
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove('visible');
+      document.getElementById('modalCancel').textContent = 'Anulează';
+    }
+
+    // ===== TASK DETAIL MODAL (read-only) =====
+    // Board cards are collapsed to title / due / assignee; nota, statutul
+    // recurent și subtask-urile se văd aici, doar afișaj.
+
+    // A subtask's result (whatever got produced when someone actually
+    // worked it — a summary, a link to a file) is stored as st.result and
+    // rendered as a collapsed panel under the row. A path-looking token
+    // that ends in an image extension gets embedded as an <img> so a
+    // diagram result actually shows the diagram, not just its filename.
+    // Convention: a subtask that starts with the warning icon + "Blocaj"
+    // is treated as a blocker — rendered in red and sorted to the top of
+    // its task's subtask list, regardless of where it sits in the file,
+    // so it's never buried below routine items.
+    function isBlockerText(text) {
+      return /^\s*(⚠️|⚠)\s*Blocaj/i.test(text || '');
+    }
+
+    // Short clickable label for a result's collapsed state — first line
+    // of the result text, trimmed, so you know what you're expanding
+    // before you click.
+    function getResultPreviewTitle(resultText) {
+      const firstLine = (resultText.split('\n')[0] || '').trim();
+      const max = 72;
+      return firstLine.length > max ? firstLine.slice(0, max).trim() + '…' : firstLine;
+    }
+
+    function renderSubtaskResult(resultText) {
+      const pathRegex = /[\w.\/-]+\/[\w.-]+\.\w{2,5}/g;
+      const paths = [...new Set(resultText.match(pathRegex) || [])];
+      const imageExt = /\.(svg|png|jpe?g|gif)$/i;
+      const imagePath = paths.find(p => imageExt.test(p));
+
+      let escaped = escapeHtml(resultText);
+      paths.forEach(p => {
+        const escapedPath = escapeHtml(p);
+        escaped = escaped.split(escapedPath).join(`<a href="${escapedPath}" target="_blank">${escapedPath}</a>`);
+      });
+
+      let html = '';
+      if (imagePath) {
+        html += `<img src="${escapeHtml(imagePath)}" alt="rezultat" style="max-width:100%; border:1px solid var(--border); border-radius:6px; margin-bottom:8px; display:block;" />`;
+      }
+      html += `<div style="white-space: pre-wrap; font-size: 12px; line-height: 1.5;">${escaped}</div>`;
+      return html;
+    }
+
+    // Read-only: fără checkbox toggle, fără editare de text, fără ștergere
+    // de subtask/rezultat — doar afișaj (rezultatul rămâne expandabil, e
+    // doar stare de UI, nu o modificare de date).
+    function renderTaskDetailSubtasks(task) {
+      const container = document.getElementById('taskDetailSubtasks');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const order = task.subtasks.map((_, i) => i);
+      order.sort((a, b) => {
+        const aBlock = isBlockerText(task.subtasks[a].text);
+        const bBlock = isBlockerText(task.subtasks[b].text);
+        if (aBlock === bBlock) return 0;
+        return aBlock ? -1 : 1;
+      });
+
+      order.forEach(idx => {
+        const st = task.subtasks[idx];
+        const blocked = isBlockerText(st.text);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'task-detail-subtask-wrap';
+
+        const row = document.createElement('div');
+        row.className = 'task-detail-subtask-row' + (blocked ? ' subtask-row-blocked' : '');
+        row.innerHTML = `
+          <span class="checkbox ${st.checked ? 'checked' : ''}" style="width: 16px; height: 16px; min-width: 16px; min-height: 16px; pointer-events: none;"></span>
+          <span style="flex: 1;">${escapeHtml(st.text)}</span>
+        `;
+        wrap.appendChild(row);
+
+        if (st.result) {
+          const header = document.createElement('div');
+          header.className = 'subtask-result-header';
+          header.dataset.idx = idx;
+          header.innerHTML = `<span class="subtask-result-chevron">▾</span><span class="subtask-result-title">${escapeHtml(getResultPreviewTitle(st.result))}</span>`;
+          wrap.appendChild(header);
+
+          const panel = document.createElement('div');
+          panel.className = 'subtask-result-panel';
+          panel.style.display = 'none';
+          panel.innerHTML = renderSubtaskResult(st.result);
+          wrap.appendChild(panel);
+        }
+
+        container.appendChild(wrap);
+      });
+
+      container.querySelectorAll('.subtask-result-header').forEach(el => {
+        el.addEventListener('click', () => {
+          const panel = el.nextElementSibling;
+          const isOpen = panel.style.display !== 'none';
+          panel.style.display = isOpen ? 'none' : 'block';
+          el.querySelector('.subtask-result-chevron').textContent = isOpen ? '▾' : '▴';
+          el.classList.toggle('open', !isOpen);
+        });
+      });
+    }
+
+    // Read-only: titlu/notă/recurent/subtask-uri sunt doar afișate, nu
+    // editabile — singura sursă de adevăr e sesiunea de Claude Code care
+    // scrie direct în TASKS.md.
+    function openTaskDetailModal(task) {
+      document.getElementById('modalTitle').textContent = (task.ticket ? task.ticket + ' — ' : '') + task.title;
+
+      const noteHtml = task.note ? `<div class="form-group"><label>Notă</label><p>${escapeHtml(task.note)}</p></div>` : '';
+      const recurrentHtml = task.recurrent
+        ? `<div class="form-group"><label>Recurent</label><p>🔁 ${escapeHtml(task.recurrent)}</p></div>`
+        : '';
+
+      document.getElementById('modalBody').innerHTML = `
+        ${noteHtml}
+        ${recurrentHtml}
+        <div class="form-group">
+          <label>Subtask-uri</label>
+          <div id="taskDetailSubtasks"></div>
+        </div>
+      `;
+
+      renderTaskDetailSubtasks(task);
+
+      document.getElementById('modalCancel').textContent = 'Închide';
+      modalOverlay.classList.add('visible');
+      modalOverlay.dataset.type = 'taskDetail';
+      // ticket (not task.id) is what survives a reparse — parseTaskMarkdown
+      // mints a fresh random id every time, so it's useless for re-finding
+      // this task after an external-change reload swaps in new objects.
+      modalOverlay.dataset.taskTicket = task.ticket || '';
+    }
+
+    // Called after an external-change reload replaces `tasks` with freshly
+    // parsed objects. If the task-detail modal is open, it's still bound
+    // to the old (now-orphaned) task object from before the reload — the
+    // board re-renders fine since createCard() runs again, but nothing
+    // re-populates an already-open modal, so results/edits made elsewhere
+    // (like another session, or me) stayed invisible until the user closed
+    // and reopened it. Skips the refresh if focus is inside the modal, so
+    // it doesn't yank an in-progress edit out from under the user.
+    function refreshOpenTaskDetailModal() {
+      if (!modalOverlay.classList.contains('visible') || modalOverlay.dataset.type !== 'taskDetail') return;
+      const ticket = modalOverlay.dataset.taskTicket;
+      if (!ticket) return;
+
+      const active = document.activeElement;
+      const modalBody = document.getElementById('modalBody');
+      if (active && modalBody && modalBody.contains(active)) return;
+
+      for (const list of Object.values(tasks)) {
+        const found = (list || []).find(t => t.ticket === ticket);
+        if (found) { openTaskDetailModal(found); return; }
+      }
+      closeModal();
+    }
+
+    // Memory event listeners
+    connectFolderBtn.addEventListener('click', () => {
+      settingsDropdownMenu.style.display = 'none';
+      loadMemoryDirectory();
+    });
+    document.getElementById('openMemoryBtnLarge').addEventListener('click', loadMemoryDirectory);
+    document.getElementById('openPeopleBtnLarge').addEventListener('click', loadMemoryDirectory);
+    document.getElementById('openProjectsBtnLarge').addEventListener('click', loadMemoryDirectory);
+    document.getElementById('openTeamBtnLarge').addEventListener('click', loadMemoryDirectory);
+    document.getElementById('projectsSearch').addEventListener('input', (e) => filterProjects(e.target.value));
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('modalCancel').addEventListener('click', closeModal);
+
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // ============================================================
+    // ===== AUTO-RECONNECT ON LOAD =====
+    // ============================================================
+    // Try to silently reuse the previously granted handles (works when
+    // the browsing session is still alive). If permission has reverted
+    // to 'prompt' (e.g. after a browser restart), don't call
+    // requestPermission without a user gesture — instead park the handle
+    // and relabel the button so the next click reconnects instantly
+    // instead of opening the file picker again.
+    async function tryAutoReconnect() {
+      try {
+        const memHandle = await idbGetHandle('memoryDir');
+        if (memHandle) {
+          if (await memHandle.queryPermission({ mode: 'read' }) === 'granted') {
+            await loadMemoryFromDirHandle(memHandle);
+            showStatus('Reconectat la ' + memoryDirHandle.name);
+          } else {
+            pendingMemoryHandle = memHandle;
+            connectFolderBtn.textContent = '📁 Reconectează folder';
+            const largeBtn = document.getElementById('openMemoryBtnLarge');
+            if (largeBtn) largeBtn.textContent = 'Reconectează';
+            const boardLargeBtn = document.getElementById('openBtnLarge');
+            if (boardLargeBtn) boardLargeBtn.textContent = 'Reconectează';
+          }
+        }
+      } catch (e) { console.log('Memory auto-reconnect skipped', e); }
+    }
+
+    tryAutoReconnect();
+    applyRouteFromHash();
+  </script>
+</body>
+</html>

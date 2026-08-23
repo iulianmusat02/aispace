@@ -1,0 +1,13 @@
+# All dynamic/personal data lives here — generated during onboarding from
+# templates/, never shared via git. See README.md and CLAUDE.md for the
+# onboarding flow.
+/my-context/*
+!/my-context/assets/
+
+# assets/ itself must exist after a fresh clone (that's what makes it a
+# usable drop zone for files the user wants worked on — spreadsheets, etc.)
+# but whatever gets dropped in there is personal, never shared via git.
+/my-context/assets/*
+!/my-context/assets/.gitkeep
+
+.DS_Store
