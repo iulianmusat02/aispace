@@ -854,6 +854,70 @@
       gap: 16px;
     }
 
+    .commands-intro {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin: -4px 0 12px;
+    }
+
+    .command-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .command-name {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .command-badge {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1px 8px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .command-summary {
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .command-steps {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text-secondary, var(--text-primary));
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .command-when {
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      margin-top: auto;
+    }
+
+    .command-when code, .command-name code {
+      background: var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 12px;
+    }
+
     .projects-section + .projects-section {
       margin-top: 32px;
     }
@@ -1718,6 +1782,7 @@
         <button id="projectsTabBtn">Proiecte</button>
         <button id="tasksTabBtn" class="active">Task-uri</button>
         <button id="teamTabBtn">Echipă</button>
+        <button id="commandsTabBtn">Comenzi</button>
       </div>
       <div class="view-toggle" id="taskViewToggle">
         <button id="boardViewBtn" class="active">Panou</button>
@@ -1821,6 +1886,96 @@
     </div>
   </div>
 
+  <!-- COMMANDS TAB PANEL -->
+  <!-- Legenda comenzilor: partea statică nu depinde de folderul conectat;
+       „Skill-uri învățate" se citește din my-context/skills/ + team/skills/. Când se
+       adaugă/modifică o comandă în .claude/skills/, se actualizează și aici. -->
+  <div class="tab-panel" id="commandsPanel">
+    <div class="memory-content-area">
+      <div style="padding: 20px;">
+        <div class="projects-section">
+          <h3 class="projects-section-title">Comenzi</h3>
+          <p class="commands-intro">Le scrii direct în conversația cu Claude. Fiecare pornește o acțiune completă, pas cu pas.</p>
+          <div class="memory-grid">
+            <div class="command-card">
+              <div class="command-name">/install</div>
+              <div class="command-summary">Setup inițial: te cunoaște, îți pregătește spațiul de lucru și deschide acest dashboard.</div>
+              <ol class="command-steps">
+                <li>Te întreabă, pe rând: domeniu, rol, echipă, oameni cheie, proiecte, task-uri curente, tool-uri folosite, stil de comunicare.</li>
+                <li>Pe baza tool-urilor alese (Gmail, Jira, Slack…) îți propune conectorii potriviți și îi conectează doar pe cei pe care îi aprobi.</li>
+                <li>Generează din șabloane profilul, fișa fiecărei persoane și a fiecărui proiect și lista de task-uri.</li>
+                <li>Pornește live server-ul și deschide dashboard-ul în browser.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> prima dată, sau când vrei să refaci contextul. Pornește și singur dacă nu există încă un profil.</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/planning</div>
+              <div class="command-summary">Reia doar partea de task-uri/rutine din /install — nu tot onboarding-ul, doar ce mai ai de făcut.</div>
+              <ol class="command-steps">
+                <li>Îți arată pe scurt ce task-uri/rutine ai deja active.</li>
+                <li>Te întreabă, pe rând, ce task-uri noi ai și dacă e ceva recurent (o rutină).</li>
+                <li>Le adaugă în TASKS.md, cu ID-uri continuând numerotarea existentă.</li>
+                <li>Semnalează care par ceva ce poate face direct și oferă să înceapă pe loc.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> ai lucruri noi de adăugat pe agendă, fără să refaci tot setup-ul. Necesită un profil deja creat (rulează întâi /install).</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/plan <span class="command-badge">nativă Claude Code</span></div>
+              <div class="command-summary">Modul „plan": Claude analizează și îți propune un plan, fără să modifice nimic până nu îl aprobi.</div>
+              <ol class="command-steps">
+                <li>Citește contextul: task-ul, fișierele, skill-urile tale.</li>
+                <li>Propune pașii, ce va produce și ce întrebări are.</li>
+                <li>Aștepți, ajustezi, aprobi — abia apoi se trece la execuție.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> înainte de task-uri mari sau riscante, ex. <code>/plan AS-2</code>.</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/quiz</div>
+              <div class="command-summary">Întrebări de începător despre AI, ca să-ți testezi (sau să le testezi colegilor) noțiunile de bază.</div>
+              <ol class="command-steps">
+                <li>10 întrebări grilă, una pe rând: LLM-uri, prompturi, tokeni, halucinații, agenți, confidențialitate…</li>
+                <li>După fiecare răspuns: corect/greșit și o explicație scurtă, pe exemple din muncă.</li>
+                <li>La final: scorul și ce merită aprofundat.</li>
+              </ol>
+              <div class="command-when"><strong>Variante:</strong> <code>/quiz 5</code> (număr de întrebări), <code>/quiz prompturi</code> (o singură temă).</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="projects-section">
+          <h3 class="projects-section-title">Acțiuni fără comandă</h3>
+          <div class="memory-grid">
+            <div class="command-card">
+              <div class="command-name">„Ocupă-te de AS-3"</div>
+              <div class="command-summary">Claude preia un task din listă și îl duce la capăt.</div>
+              <ol class="command-steps">
+                <li>Mută task-ul în „În lucru".</li>
+                <li>Caută un skill învățat care se potrivește. Dacă nu există, te întreabă întâi cum lucrezi tu pe astfel de task-uri.</li>
+                <li>Execută subtask-urile și scrie rezultatul sub fiecare. Ce nu poate face singur (discuții, mesaje) primește un draft gata de folosit.</li>
+                <li>Salvează modul tău de lucru ca skill, ca data viitoare să nu mai întrebe.</li>
+              </ol>
+              <div class="command-when"><strong>Nimic nu se trimite</strong> (email, mesaje) fără OK-ul tău explicit.</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">„Am un task nou…" / „X s-a alăturat echipei"</div>
+              <div class="command-summary">Spui ce s-a schimbat, iar Claude actualizează task-urile, oamenii sau proiectele.</div>
+              <ol class="command-steps">
+                <li>Pune câteva întrebări scurte, dacă lipsesc detalii (termen, responsabil).</li>
+                <li>Actualizează fișierele; dashboard-ul se reîncarcă singur.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="projects-section">
+          <h3 class="projects-section-title">Skill-uri învățate</h3>
+          <p class="commands-intro">Modurile tale de lucru, învățate din task-uri. Claude le aplică automat la task-urile potrivite.</p>
+          <div id="learnedSkillsContainer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL (shared for memory) -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
@@ -1855,6 +2010,8 @@
     const settingsBtn = document.getElementById('settingsBtn');
     const teamTabBtn = document.getElementById('teamTabBtn');
     const projectsTabBtn = document.getElementById('projectsTabBtn');
+    const commandsTabBtn = document.getElementById('commandsTabBtn');
+    const commandsPanel = document.getElementById('commandsPanel');
     const tasksPanel = document.getElementById('tasksPanel');
     const memoryPanel = document.getElementById('memoryPanel');
     const peoplePanel = document.getElementById('peoplePanel');
@@ -1893,12 +2050,14 @@
       settingsBtn.classList.toggle('active', tab === 'memory' || tab === 'people');
       teamTabBtn.classList.toggle('active', tab === 'team');
       projectsTabBtn.classList.toggle('active', tab === 'projects');
+      commandsTabBtn.classList.toggle('active', tab === 'commands');
 
       tasksPanel.classList.toggle('active', tab === 'tasks');
       memoryPanel.classList.toggle('active', tab === 'memory');
       peoplePanel.classList.toggle('active', tab === 'people');
       projectsPanel.classList.toggle('active', tab === 'projects');
       teamPanel.classList.toggle('active', tab === 'team');
+      commandsPanel.classList.toggle('active', tab === 'commands');
 
       // Toggle-ul Panou/Listă n-are sens pe Recurente (nu au coloane de
       // status), deci apare doar pe Task-uri > Punctuale.
@@ -1916,6 +2075,7 @@
       if (tab === 'people') renderPeople();
       if (tab === 'projects') renderProjects();
       if (tab === 'team') renderTeam();
+      if (tab === 'commands') renderLearnedSkills();
 
       if (!skipHash) updateHash();
     }
@@ -1932,6 +2092,7 @@
     tasksTabBtn.addEventListener('click', () => switchMainTab('tasks'));
     teamTabBtn.addEventListener('click', () => switchMainTab('team'));
     projectsTabBtn.addEventListener('click', () => switchMainTab('projects'));
+    commandsTabBtn.addEventListener('click', () => switchMainTab('commands'));
     taskTypePunctualBtn.addEventListener('click', () => setTaskTypeFilter('punctual'));
     taskTypeRecurrentBtn.addEventListener('click', () => setTaskTypeFilter('recurrent'));
 
@@ -1939,7 +2100,7 @@
     // restaurează exact tab-ul (+ subtab-ul de tasks) de dinainte.
     function applyRouteFromHash() {
       const parts = (location.hash || '').replace(/^#\/?/, '').split('/').filter(Boolean);
-      const knownTabs = ['tasks', 'memory', 'people', 'projects', 'team'];
+      const knownTabs = ['tasks', 'memory', 'people', 'projects', 'team', 'commands'];
       const tab = knownTabs.includes(parts[0]) ? parts[0] : 'tasks';
       if (tab === 'tasks' && (parts[1] === 'recurrent' || parts[1] === 'punctual')) {
         taskTypeFilter = parts[1];
@@ -2881,6 +3042,35 @@
         } catch (e) { console.log('No my-context/TASKS.md found yet', e); }
       } catch (e) { console.log('No my-context/ directory found'); }
 
+      // team/ = contextul comun al echipei (în git, același la toți colegii).
+      // Subfolderele lui (people/, projects/, skills/) se adaugă peste cele
+      // din my-context/, ca paginile Oameni/Proiecte/Comenzi să le arate
+      // pe toate; team/profile.md apare ca tab separat „echipa".
+      try {
+        const teamDir = await memoryDirHandle.getDirectoryHandle('team');
+        for await (const entry of teamDir.values()) {
+          if (entry.kind === 'file' && entry.name === 'profile.md') {
+            const file = await entry.getFile();
+            memoryData.memoryFiles.push({ name: 'echipa.md', content: await file.text(), fileHandle: entry });
+          } else if (entry.kind === 'directory') {
+            const list = memoryData.memoryDirs[entry.name] || (memoryData.memoryDirs[entry.name] = []);
+            for await (const subEntry of entry.values()) {
+              if (subEntry.kind !== 'file' || !subEntry.name.endsWith('.md')) continue;
+              if (list.some(f => f.name === subEntry.name)) continue;
+              const file = await subEntry.getFile();
+              const content = await file.text();
+              list.push({
+                name: subEntry.name,
+                content: content,
+                fileHandle: subEntry,
+                dirHandle: entry,
+                parsed: parseMemoryMarkdown(content)
+              });
+            }
+          }
+        }
+      } catch (e) { console.log('No team/ directory found'); }
+
       renderMemory();
       memoryEmptyState.style.display = 'none';
       memoryMainContent.style.display = 'flex';
@@ -2889,6 +3079,7 @@
       renderPeople();
       renderProjects();
       renderTeam();
+      renderLearnedSkills();
     }
 
     async function loadMemoryDirectory() {
@@ -2940,7 +3131,7 @@
 
       const files = (memoryData.memoryDirs && memoryData.memoryDirs['people']) || [];
       if (files.length === 0) {
-        peopleContainer.innerHTML = '<p style="color: var(--text-muted); padding: 8px;">Niciun fișier găsit în my-context/people/.</p>';
+        peopleContainer.innerHTML = '<p style="color: var(--text-muted); padding: 8px;">Niciun fișier găsit în team/people/ sau my-context/people/.</p>';
         return;
       }
 
@@ -3084,7 +3275,7 @@
 
       const files = (memoryData.memoryDirs && memoryData.memoryDirs['projects']) || [];
       if (files.length === 0) {
-        projectsContainer.innerHTML = '<p style="color: var(--text-muted); padding: 8px;">Niciun fișier găsit în my-context/projects/.</p>';
+        projectsContainer.innerHTML = '<p style="color: var(--text-muted); padding: 8px;">Niciun fișier găsit în team/projects/ sau my-context/projects/.</p>';
         return;
       }
 
@@ -3123,6 +3314,37 @@
       projectsContainer.querySelectorAll('.memory-card').forEach(cardEl => {
         const searchData = cardEl.dataset.search || '';
         cardEl.style.display = (!search || searchData.includes(search)) ? '' : 'none';
+      });
+    }
+
+    // ===== LEARNED SKILLS (my-context/skills/, pe pagina Comenzi) =====
+    // Same card format as projects — a skill file declares "Când se aplică"
+    // / "Sursă" as **Key:** fields, which the card shows up front.
+    function renderLearnedSkills() {
+      const container = document.getElementById('learnedSkillsContainer');
+      if (!container) return;
+
+      if (!memoryDirHandle) {
+        container.innerHTML = '';
+        const p = document.createElement('p');
+        p.className = 'commands-intro';
+        p.textContent = 'Conectează folderul de proiect ca să vezi skill-urile învățate.';
+        const btn = document.createElement('button');
+        btn.id = 'connectSkillsBtn';
+        btn.textContent = pendingMemoryHandle ? '📁 Reconectează folder' : '📁 Conectează folder';
+        btn.addEventListener('click', loadMemoryDirectory);
+        container.appendChild(p);
+        container.appendChild(btn);
+        return;
+      }
+      const files = (memoryData.memoryDirs && memoryData.memoryDirs['skills']) || [];
+      if (files.length === 0) {
+        container.innerHTML = '<p class="commands-intro">Încă niciunul. Apar aici după ce îi explici lui Claude cum lucrezi pe un task.</p>';
+        return;
+      }
+      container.innerHTML = `<div class="memory-grid">${files.map(buildProjectCardHtml).join('')}</div>`;
+      container.querySelectorAll('.memory-card').forEach(cardEl => {
+        cardEl.addEventListener('click', () => openFileModal('skills', cardEl.dataset.fileName));
       });
     }
 
@@ -3166,7 +3388,7 @@
         });
 
       if (rows.length === 0) {
-        teamContainer.innerHTML = '<p style="color: var(--text-muted); padding: 8px;">Niciun coleg găsit în my-context/people/.</p>';
+        teamContainer.innerHTML = '<p style="color: var(--text-muted); padding: 8px;">Niciun coleg găsit în team/people/ sau my-context/people/.</p>';
         return;
       }
 

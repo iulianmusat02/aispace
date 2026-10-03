@@ -10,4 +10,11 @@
 /my-context/assets/*
 !/my-context/assets/.gitkeep
 
+# Chei API / secrete pentru playbook-uri (ex. OPENAI_API_KEY pentru
+# generare de imagini/video) — niciodată în git. .env.example rămâne
+# tracked, ca oricine să știe ce variabile sunt așteptate.
+/.env
+/.env.*
+!/.env.example
+
 .DS_Store

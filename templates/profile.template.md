@@ -13,8 +13,8 @@
 ## People
 
 <!-- Oamenii cu care lucrezi și ce fac. Pentru context mai bogat pe o persoană
-     (1:1s, goals, stats), creează memory/people/<slug>.md din
-     templates/memory/people/_person.template.md și leagă-l aici cu [[slug]]. -->
+     (1:1s, goals, stats), creează my-context/people/<slug>.md din
+     templates/people/_person.template.md și leagă-l aici cu [[slug]]. -->
 
 | Who | Role | Lucrează pe |
 |-----|------|-------------|
@@ -32,8 +32,8 @@
 <!-- Structură pe 2 niveluri, opțional: proiecte mari (top-level) și module
      (construite în cadrul unui proiect mare). Adaptează cum are sens pentru
      contextul tău — nu toată lumea are nevoie de 2 niveluri.
-     Pentru detalii pe un proiect, creează memory/projects/<slug>.md din
-     templates/memory/projects/_project.template.md și leagă-l cu [[slug]]. -->
+     Pentru detalii pe un proiect, creează my-context/projects/<slug>.md din
+     templates/projects/_project.template.md și leagă-l cu [[slug]]. -->
 
 ### Proiecte mari
 
@@ -44,6 +44,24 @@
 
 | Module | Parte din | What |
 |--------|-----------|------|
+
+## Tools
+
+<!-- Tool-urile folosite zilnic și dacă sunt conectate ca MCP/conector
+     (conectat / de autorizat / de conectat / fără conector). -->
+
+| Tool | Folosit pentru | Status |
+|------|----------------|--------|
+
+## Automation opportunities
+
+<!-- Canale prin care businessul interacționează cu clienții + procese
+     repetitive menționate la onboarding sau ulterior. Pentru fiecare, dacă
+     există o rețetă în playbooks/, o leg aici — la cererea reală de
+     implementare, pornesc din playbook, nu de la zero. -->
+
+| Canal/Proces | Playbook potrivit | Status |
+|--------------|--------------------|--------|
 
 ## Preferences
 <!-- Limbă de comunicare, nivel de detaliu, orice altceva despre cum preferi să lucrezi cu Claude -->
