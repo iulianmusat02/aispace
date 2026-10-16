@@ -58,10 +58,10 @@ Nu bombarda userul cu tot deodată — 1 AskUserQuestion sau 1 întrebare liber�
   4. Dacă e ceva care se repetă periodic (o instrucțiune permanentă — ex. "verifică emailurile în fiecare zi la 10:00"), marchează-l ca recurent și notează intervalul exact; altfel e un task normal cu due date.
   5. Notează intern (nu întrerupe secvența acum) dacă task-ul pare ceva ce ai putea face tu direct (scris, research, draft, cod, diagramă, procesare fișier) — le semnalezi grupat la pasul 7 (Confirmare), nu pe rând aici.
   6. AskUserQuestion: "Mai ai și alte task-uri de adăugat acum?" (Da / Nu, max. 5-6) — dacă Da, repetă 1-5.
-  Nu întreba aici despre modul de lucru pe fiecare task — asta se întreabă la momentul execuției (vezi „Task execution workflow" în CLAUDE.md), ca onboarding-ul să rămână scurt.
+  Nu întreba aici despre modul de lucru pe fiecare task — asta se întreabă la momentul execuției (vezi `reference/task-workflow.md`), ca onboarding-ul să rămână scurt.
 - **Rutine** — întrebare separată, explicită, nu doar sub-pas la task-urile curente (oamenii gândesc diferit „ce am de făcut" de „ce fac regulat" și uită des să menționeze rutinele dacă nu sunt întrebați punctual):
   1. "Ai vreo rutină sau verificare care se repetă (zilnic, săptămânal, lunar)? De ex. verificare emailuri la o oră fixă, raport săptămânal, backup, monitorizare a ceva."
-  2. Pentru fiecare rutină descrisă: notează intervalul exact (ex. "zilnic la 10:00", "lunea dimineața") și adaug-o ca task recurent (vezi formatul `(recurrent: ...)` din „Task execution workflow" în CLAUDE.md) — ajunge automat în subtab-ul „🔁 Recurente" din dashboard, nu se amestecă cu task-urile punctuale.
+  2. Pentru fiecare rutină descrisă: notează intervalul exact (ex. "zilnic la 10:00", "lunea dimineața") și adaug-o ca task recurent (vezi formatul `(recurrent: ...)` din `reference/task-workflow.md`) — ajunge automat în subtab-ul „🔁 Recurente" din dashboard, nu se amestecă cu task-urile punctuale.
   3. AskUserQuestion: "Mai ai și alte rutine de adăugat?" (Da / Nu) — dacă Da, repetă 1-2.
 - **Tool-uri folosite** — ca să știu ce MCP-uri/conectori să instalez:
   1. AskUserQuestion, multiSelect: "Ce tipuri de tool-uri folosești în munca de zi cu zi?" — Email & calendar, Chat & comunicare, Task-uri & proiecte, Documente & cod.
@@ -82,8 +82,8 @@ Toate pornind din `templates/` (creează folderele `my-context/`, `my-context/pe
 
 - `my-context/people/<slug>.md` din `templates/people/_person.template.md` — **câte unul pentru fiecare om cheie** (slug kebab-case, ex. `elena-man.md`), cu Rol, Email (dacă a fost dat), Lucrează pe `[[slug-proiect]]`. Obligatoriu: tab-urile Oameni/Echipă din dashboard citesc doar din acest folder.
 - `my-context/projects/<slug>.md` din `templates/projects/_project.template.md` — **câte unul pentru fiecare proiect**, cu descrierea, rolul userului, echipa (`[[slug-persoană]]`) și termenii cheie. Obligatoriu (tab-ul Proiecte).
-- `my-context/TASKS.md` din `templates/TASKS.template.md`, populat cu task-urile adunate (formatul din „Task execution workflow" în CLAUDE.md), cu ID-uri `AS-1`, `AS-2`, … în ordine.
-- `my-context/skills/` rămâne gol — se populează pe măsură ce lucrăm pe task-uri (vezi CLAUDE.md).
+- `my-context/TASKS.md` din `templates/TASKS.template.md`, populat cu task-urile adunate (formatul din `reference/task-workflow.md`, pe care îl citesc înainte să scriu), cu ID-uri `AS-1`, `AS-2`, … în ordine.
+- `my-context/skills/` rămâne gol — se populează pe măsură ce lucrăm pe task-uri (vezi `reference/skills-and-playbooks.md`).
 - `my-context/context/*.md` și `my-context/glossary.md` NU se creează acum — doar ulterior, când apare context stabil suficient de bogat.
 - **Ultimul** fișier scris: `my-context/profile.md`, din `templates/profile.template.md`, inclusiv secțiunea Tools (status inițial „de conectat" pentru fiecare tool ales) și secțiunea Automation opportunities (canalele/procesele de la pasul 3, cu playbook-ul potrivit găsit sau "fără playbook încă"). Link-urile `[[slug]]` din tabele trebuie să corespundă exact numelor fișierelor create mai sus. Fiind scris ultimul, existența lui marchează un onboarding complet.
 - Asigură-te că `my-context/assets/.gitkeep` există.
@@ -102,12 +102,12 @@ Dacă userul vrea să sară peste acest pas, notează tool-urile ca „de conect
 
 ## 6. Pornește dashboard-ul
 
-Urmează secțiunea „Pornire dashboard" din CLAUDE.md (instalează `live-server` dacă lipsește, îl pornește și deschide `dashboard.html` în browser). Apoi spune-i userului, pe scurt: în dashboard, o singură dată, Setări → „📁 Conectează folder" și alege folderul proiectului; dacă browserul oferă „Permite la fiecare vizită", să aleagă asta, ca pagina să se reîncarce singură cu datele noi.
+Urmează secțiunea „Pornire dashboard" din `reference/dashboard.md` (instalează `live-server` dacă lipsește, îl pornește și deschide `dashboard.html` în browser). Apoi spune-i userului, pe scurt: în dashboard, o singură dată, Setări → „📁 Conectează folder" și alege folderul proiectului; dacă browserul oferă „Permite la fiecare vizită", să aleagă asta, ca pagina să se reîncarce singură cu datele noi.
 
 ## 7. Confirmare
 
 Confirmă că setup-ul e gata, în termeni de business, nu tehnici — NU menționa git, gitignore, ce fișiere există pe disc sau alte detalii de implementare. Rezumat: ce ai reținut (rol, echipă, proiecte), câți oameni și proiecte ai adăugat, câte task-uri sunt notate, ce tool-uri sunt conectate și care mai trebuie autorizate. Dacă la pasul 3 au ieșit canale/procese cu playbook potrivit, menționează-le punctual ca oportunități deja identificate de automatizare (fără să te apuci de ele acum, doar semnalezi că există rețeta). Menționează că pagina „Comenzi" din dashboard explică ce comenzi are la dispoziție.
 
-**Nu te oprești la un rezumat pasiv.** Dacă la pasul „Task-uri curente" ai marcat vreun task ca fiind ceva ce poți face tu direct (vezi „Sunt build/solve/automate-oriented, nu doar ghidez" din CLAUDE.md), numește-l explicit acum și oferă-te să te apuci de el pe loc — ex. „Văd că ai «X» pe listă — e ceva ce pot face eu acum, vrei să mă apuc?" Dacă spune da, treci direct la treabă (urmează „Task execution workflow" din CLAUDE.md), fără să mai aștepți altă cerere. Dacă n-a fost niciun task de genul ăsta, sau spune nu, treci la cererea lui originală (dacă a avut una) sau întreabă cu ce vrea să înceapă.
+**Nu te oprești la un rezumat pasiv.** Dacă la pasul „Task-uri curente" ai marcat vreun task ca fiind ceva ce poți face tu direct (vezi „Sunt build/solve/automate-oriented, nu doar ghidez" din CLAUDE.md), numește-l explicit acum și oferă-te să te apuci de el pe loc — ex. „Văd că ai «X» pe listă — e ceva ce pot face eu acum, vrei să mă apuc?" Dacă spune da, treci direct la treabă (urmează `reference/task-workflow.md`), fără să mai aștepți altă cerere. Dacă n-a fost niciun task de genul ăsta, sau spune nu, treci la cererea lui originală (dacă a avut una) sau întreabă cu ce vrea să înceapă.
 
 Onboarding-ul nu trebuie să fie exhaustiv din prima — poate fi completat incremental în sesiuni viitoare.

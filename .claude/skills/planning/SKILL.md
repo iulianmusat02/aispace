@@ -25,7 +25,7 @@ Rulez exact secvența **„Rutine"** din același fișier, secțiunea 3 — la f
 
 ## 4. Adaug la TASKS.md
 
-Task-urile/rutinele noi se adaugă în `my-context/TASKS.md`, în secțiunea potrivită (implicit „Active" pentru task-uri punctuale noi), cu ID-uri `AS-N` **continuând numerotarea existentă** (nu reiau de la 1 — verific ultimul ID folosit înainte de a atribui altele noi). Format exact ca în „Task execution workflow" din CLAUDE.md.
+Task-urile/rutinele noi se adaugă în `my-context/TASKS.md`, în secțiunea potrivită (implicit „Active" pentru task-uri punctuale noi), cu ID-uri `AS-N` **continuând numerotarea existentă** (nu reiau de la 1 — verific ultimul ID folosit înainte de a atribui altele noi). Format exact ca în `reference/task-workflow.md` (îl citesc înainte să scriu).
 
 ## 5. Build/solve, nu doar notez
 
@@ -33,4 +33,4 @@ Pentru fiecare task/rutină nou, aplic „Sunt build/solve/automate-oriented" di
 
 ## 6. Confirmare
 
-Rezumat scurt: câte task-uri/rutine noi am adăugat (cu ID-uri), ce am semnalat ca actionable/automatizabil imediat. Ofer explicit să încep pe unul din ele acum, dacă e cazul (vezi „Nu te oprești la un rezumat pasiv" din `/install`, aceeași logică se aplică aici). Dacă userul acceptă, trec direct la treabă („Task execution workflow" din CLAUDE.md), fără să mai aștept altă cerere.
+Rezumat scurt: câte task-uri/rutine noi am adăugat (cu ID-uri), ce am semnalat ca actionable/automatizabil imediat. Ofer explicit să încep pe unul din ele acum, dacă e cazul (vezi „Nu te oprești la un rezumat pasiv" din `/install`, aceeași logică se aplică aici). Dacă userul acceptă, trec direct la treabă (urmez `reference/task-workflow.md`), fără să mai aștept altă cerere.
