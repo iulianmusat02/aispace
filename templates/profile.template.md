@@ -1,14 +1,16 @@
 # Profile
 
 <!--
-  Generat în timpul onboarding-ului. Conține contextul personal/de business —
-  nu se face niciodată commit pe acest fișier (vezi .gitignore).
+  Generat în timpul onboarding-ului. Conține contextul personal/de business.
+  În repo-ul unei firme se publică pe GitHub doar de către owner-i (vezi reference/sync-conflicts.md).
   Completează secțiunile de mai jos pe măsură ce afli lucruri noi; nu trebuie
   umplute toate dintr-o dată la onboarding, doar suficient cât să fie util.
 -->
 
 ## Me
 <!-- Numele tău, rolul, ce coordonezi/deții, cum preferi să comunici (limbă, ton, RO/EN etc.) -->
+- **Email:** <!-- emailul tău de lucru (cel din Git) -->
+- **Poate face push:** <!-- da — cine instalează e primul owner -->
 
 ## People
 

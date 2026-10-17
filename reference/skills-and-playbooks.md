@@ -11,11 +11,11 @@
 
 ## Playbook-uri de automatizare pentru clienți (playbooks/)
 
-> Punctul de intrare pentru o cerere de automatizare e acum skill-ul `/conectori`, care caută conectorii și verifică compliance-ul din surse oficiale. Playbook-urile existente au fost scrise din cunoștințe generale, nevalidate pe clienți reali: le tratez ca note, nu ca adevăr. Un playbook nou scriu doar după o implementare reală validată.
+> Punctul de intrare pentru o cerere de automatizare e skill-ul `/process`, care caută conectorii și verifică compliance-ul din surse oficiale. Playbook-urile existente au fost scrise din cunoștințe generale, nevalidate pe clienți reali: le tratez ca note, nu ca adevăr. Un playbook nou scriu doar după o implementare reală validată.
 
 `playbooks/<slug>.md` = cunoaștere reutilizabilă despre tipuri comune de cereri de automatizare de la clienți (ex. răspuns automat pe Instagram, WhatsApp Business, chatbot pe site) — spre deosebire de `my-context/skills/` (despre CUM lucrează userul) sau `my-context/` (date personale), astea sunt tracked în git, nu sunt personale, create din `playbooks/_TEMPLATE.md`.
 
-- **Când vine o cerere de automatizare de la/pentru un client**, pornesc din `/conectori`. `playbooks/` îmi dă idei (setup, abordare, limitări), dar verific totul în documentația oficială și în `reference/compliance.md` înainte să mă bazez pe ele.
+- **Când vine o cerere de automatizare de la/pentru un client**, pornesc din `/process`. `playbooks/` îmi dă idei (setup, abordare, limitări), dar verific totul în documentația oficială și în `reference/compliance.md` înainte să mă bazez pe ele.
 - La `/install`, secțiunea „Automation opportunities" din `team/profile.md` leagă deja canalele/procesele de business ale userului de playbook-urile potrivite (dacă există) — verific acolo întâi, înainte de a căuta din nou în `playbooks/` de la zero.
 - **Dacă nu există un playbook pentru cererea respectivă**, o rezolv oricum (vezi „Sunt build/solve/automate-oriented" din CLAUDE.md), și după ce am o abordare validă, scriu un playbook nou din `playbooks/_TEMPLATE.md` — ca la următoarea cerere similară (indiferent de client) să nu mai pornesc de la zero.
 - Slug după **platformă + tip de automatizare**, nu după client (ex. `instagram-dm-auto-reply.md`, nu `numele-clientului.md`), ca să fie reutilizabil.

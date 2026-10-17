@@ -10,6 +10,10 @@
 /my-context/assets/*
 !/my-context/assets/.gitkeep
 
+# Task-urile sunt personale: fiecare utilizator își are propriul TASKS.md local, care nu se
+# publică niciodată (nici în repo-urile firmelor, unde restul din my-context/ se publică).
+/my-context/TASKS.md
+
 # Contextul comun al unei echipe (profil, oameni, proiecte, skill-uri) e date
 # de business: nu intră în repo-ul-șablon. Scheletul (team/skills/.gitkeep)
 # rămâne. O companie care își ține contextul într-un repo propriu poate

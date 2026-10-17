@@ -13,6 +13,8 @@ Dacă `my-context/profile.md` **nu există** → nu am încă context de busines
 
 ## 1. Context rapid
 
+`my-context/TASKS.md` e **personal**: nu se publică și fiecare utilizator are al lui. Dacă lipsește (de exemplu la un coleg care tocmai a clonat proiectul), îl creez acum din `templates/TASKS.template.md`, gol.
+
 Citesc `my-context/TASKS.md` curent și arăt userului, pe scurt, ce are deja (câte task-uri active, câte recurente, dacă e ceva cu deadline apropiat), 2-3 rânduri.
 
 ## 2. Secvențele de întrebări

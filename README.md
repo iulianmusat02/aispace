@@ -21,18 +21,18 @@ Din răspunsuri generează `my-context/profile.md`, `my-context/TASKS.md` și, u
 | `CLAUDE.md` | ✅ | Doar regulile care se aplică mereu + check-ul de onboarding + tabelul „când citesc ce" (se încarcă la fiecare sesiune, deci ținut mic) |
 | `reference/` | ✅ | Detaliile din spatele regulilor (workflow task-uri, personal vs. echipă, skill-uri/playbook-uri, dashboard, compliance furnizori) — citite doar când subiectul apare |
 | `templates/` | ✅ | Șabloane pentru profil, oameni, proiecte, context, task-uri, skill-uri |
-| `.claude/skills/` | ✅ | Comenzile `/install`, `/planning`, `/process`, `/conectori` și `/quiz` (legenda lor e în dashboard, pagina „Comenzi") |
+| `.claude/skills/` | ✅ | Comenzile `/install`, `/planning`, `/process` și `/quiz` (legenda lor e în dashboard, pagina „Comenzi") |
 | `playbooks/` | ✅ | Rețete reutilizabile pentru cereri comune de automatizare de la clienți (ex. Instagram DM, WhatsApp, chatbot pe site) — cunoaștere generică, nu date personale |
 | `dashboard.html` | ✅ | Unealtă generică, read-only — citesc fișierele locale direct, fără server. Nicio modificare (task-uri, oameni, proiecte) nu se face din dashboard; toate vin din sesiunile de Claude Code |
 | `my-context/profile.md` | ❌ | Contextul tău personal/de business (Me/People/Terms/Projects/Preferences) |
 | `my-context/people/*.md`, `my-context/projects/*.md`, `my-context/context/*.md` | ❌ | Detalii per persoană/proiect |
-| `my-context/TASKS.md` | ❌ | Task-urile tale curente |
+| `my-context/TASKS.md` | ❌ | Task-urile tale curente — personale, nu se publică nici în repo-ul firmei |
 | `my-context/skills/*.md` | ❌ | Modurile tale de lucru, învățate de Claude din task-uri și aplicate automat data viitoare |
 | `my-context/diagrams/`, `my-context/docs/` | ❌ | Output-uri generate din task-uri (specifice ție) |
 | `my-context/assets/` (folderul) | ✅ | Zonă de drop pentru fișiere pe care vrei să lucrezi cu Claude (ex. excel-uri) — folderul există după clone, ca să ai unde pune fișiere |
 | `my-context/assets/*` (conținutul) | ❌ | Fișierele propriu-zise puse acolo — personale, nu se distribuie prin git |
 
-Fișierele marcate ❌ sunt în `.gitignore` — sunt specifice fiecărei persoane/business și se regenerează local prin onboarding, nu se distribuie prin git.
+Fișierele marcate ❌ sunt în `.gitignore` în **repo-ul-șablon**: sunt specifice fiecărei firme și nu se distribuie prin el. În repo-ul unei firme, `/install` (pasul „Publicarea contextului") scoate `my-context/` din `.gitignore` (rămâne ignorat doar `assets/`), iar contextul se publică automat de către owner-i, pe un singur `main`; conflictele se rezolvă după `reference/sync-conflicts.md`.
 
 ## Actualizare context
 

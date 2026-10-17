@@ -1,7 +1,8 @@
 # {{Nume}}
 
 - **Rol:**
-- **Email:** <!-- opțional — util dacă va trebui vreodată să-i trimit un mail direct -->
+- **Email:** <!-- obligatoriu dacă poate face push (emailul lui din Git); altfel opțional -->
+- **Poate face push:** <!-- da / nu — doar owner-ii publică contextul pe GitHub -->
 - **Manager:**
 - **Relație:** <!-- subordonat direct / peer / extern etc. -->
 - **Lucrează pe:** <!-- [[slug-proiect]], [[slug-proiect]] -->

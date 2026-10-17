@@ -1,6 +1,6 @@
 # Compliance furnizori (GDPR / DPA / antrenare pe date)
 
-Citit de skill-ul `/conectori` și oricând întreabă userul dacă un tool e sigur cu date de client.
+Citit de skill-ul `/process` și oricând întreabă userul dacă un tool e sigur cu date de client.
 
 **Cum să-l folosesc:** verificat de la sursă pe **2026-10-04**, din pagini oficiale ale furnizorilor, prin cercetare automată. Unde pagina n-a putut fi citită, scrie „neverificat". Nu completez din memorie. Termenii se schimbă: după 6 luni sau înainte de un client sensibil, re-verific și actualizez rândul (cu data și sursa).
 

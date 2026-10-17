@@ -29,7 +29,7 @@ AskUserQuestion permite maxim 4 opțiuni + "Other" per întrebare — pentru cat
 
 Nu bombarda userul cu tot deodată — 1 AskUserQuestion sau 1 întrebare liberă pe rând, cu multiSelect unde are sens:
 
-- **Nume** (întrebare liberă, prima din secvență): "Cum ai vrea să-ți spun?" — numele sau prescurtarea cu care se prezintă devine modul standard de adresare de acum încolo, salvat la „Me" în profile.md.
+- **Nume** (întrebare liberă, prima din secvență): "Cum ai vrea să-ți spun?" — numele sau prescurtarea cu care se prezintă devine modul standard de adresare de acum încolo, salvat la „Me" în profile.md. Cine rulează install-ul este **primul owner** al contextului firmei: citești emailul lui de lucru din configurarea Git (`git config user.email`; dacă lipsește, îl întrebi: „Care e emailul tău de lucru?"), îl notezi la „Me" cu `Poate face push: da`, fără să explici termeni tehnici.
 - **Domeniu — pasul 1** (AskUserQuestion, 4 opțiuni reale — NU adăuga o a 5-a opțiune gen "Altceva", tool-ul oferă deja "Other" cu exact acest rol): Tehnic/Engineering, Business (Product/Vânzări/Marketing), Operațional/Suport (HR/Legal/Finance), Producție/Servicii directe (ex. sănătate, educație, producție, construcții, retail).
 - **Domeniu — pasul 2** (AskUserQuestion, opțiuni condiționate de răspunsul de la pasul 1; dacă userul a răspuns prin "Other" la pasul 1, sari peste pasul 2 — folosește direct ce a scris):
   - Dacă Tehnic: Software Development, Infrastructură/DevOps, Data/Analytics, QA/Security.
@@ -43,7 +43,8 @@ Nu bombarda userul cu tot deodată — 1 AskUserQuestion sau 1 întrebare liber�
   2. "Care e rolul ei?"
   3. "Pe ce anume lucrează sau cu ce te ajută?"
   4. "Ai și emailul ei la îndemână? E opțional, dar util dacă va trebui vreodată să-i trimiți un mesaj direct din context."
-  5. AskUserQuestion: "Mai sunt și alți oameni cheie de adăugat?" (Da / Nu, oprește-te după max. 5-6 persoane chiar dacă răspunde Da în continuare — restul pot fi adăugate ulterior, incremental) — dacă Da, repetă 1-4.
+  5. AskUserQuestion (Da / Nu): "Poate [nume] să modifice și să publice contextul firmei pentru toată echipa?" Doar cei cu Da vor putea publica (owner-i); ceilalți citesc și lucrează local. Dacă Da, emailul ei de lucru e obligatoriu (e cel cu care se recunoaște ca owner): cere-l dacă lipsește.
+  6. AskUserQuestion: "Mai sunt și alți oameni cheie de adăugat?" (Da / Nu, oprește-te după max. 5-6 persoane chiar dacă răspunde Da în continuare — restul pot fi adăugate ulterior, incremental) — dacă Da, repetă 1-5.
 - **Proiect(e) principal(e)** — sparge în întrebări mici, punctuale, fiecare cerând explicit UN singur lucru:
   1. "Cum se numește proiectul/produsul principal la care lucrezi acum?" (doar numele)
   2. "Ai cumva vreo documentație scurtă pe acest proiect (README, notițe, spec) pe care ai putea s-o lipești aici? Dacă da, o citesc și extrag ce trebuie direct din ea — sari peste restul întrebărilor pentru acest proiect. Dacă nu ai la îndemână, continuăm cu 2-3 întrebări rapide." Dacă lipește text/link/fișier, extrage descrierea, rolul (dacă reiese) și termenii cheie, apoi confirmă pe scurt ce ai înțeles — nu mai pune 3-5 separat.
@@ -67,12 +68,12 @@ Nu bombarda userul cu tot deodată — 1 AskUserQuestion sau 1 întrebare liber�
 
 Toate pornind din `templates/` (creează folderele `my-context/`, `my-context/people/`, `my-context/projects/`, `my-context/skills/` dacă lipsesc):
 
-- `my-context/people/<slug>.md` din `templates/people/_person.template.md` — **câte unul pentru fiecare om cheie** (slug kebab-case, ex. `elena-man.md`), cu Rol, Email (dacă a fost dat), Lucrează pe `[[slug-proiect]]`. Obligatoriu: tab-urile Oameni/Echipă din dashboard citesc doar din acest folder.
+- `my-context/people/<slug>.md` din `templates/people/_person.template.md` — **câte unul pentru fiecare om cheie** (slug kebab-case, ex. `elena-man.md`), cu Rol, Email (dacă a fost dat), Poate face push (da/nu, din răspunsul de la pasul 3), Lucrează pe `[[slug-proiect]]`. Obligatoriu: tab-urile Oameni/Echipă din dashboard citesc doar din acest folder.
 - `my-context/projects/<slug>.md` din `templates/projects/_project.template.md` — **câte unul pentru fiecare proiect**, cu descrierea, rolul userului, echipa (`[[slug-persoană]]`) și termenii cheie. Obligatoriu (tab-ul Proiecte).
 - `my-context/TASKS.md` din `templates/TASKS.template.md`, **gol** (nu întrebăm de task-uri la install; se adaugă ulterior cu `/planning` sau din conversație).
 - `my-context/skills/` rămâne gol — se populează pe măsură ce lucrăm pe task-uri (vezi `reference/skills-and-playbooks.md`).
 - `my-context/context/*.md` și `my-context/glossary.md` NU se creează acum — doar ulterior, când apare context stabil suficient de bogat.
-- **Ultimul** fișier scris: `my-context/profile.md`, din `templates/profile.template.md`, inclusiv secțiunea Tools (status inițial „de conectat" pentru fiecare tool ales) și secțiunea Automation opportunities (canalele de la pasul 3, cu playbook-ul potrivit găsit sau "fără playbook încă"). Link-urile `[[slug]]` din tabele trebuie să corespundă exact numelor fișierelor create mai sus. Fiind scris ultimul, existența lui marchează un onboarding complet.
+- **Ultimul** fișier scris: `my-context/profile.md`, din `templates/profile.template.md`, inclusiv emailul și `Poate face push: da` ale celui care instalează (la „Me"), secțiunea Tools (status inițial „de conectat" pentru fiecare tool ales) și secțiunea Automation opportunities (canalele de la pasul 3, cu playbook-ul potrivit găsit sau "fără playbook încă"). Link-urile `[[slug]]` din tabele trebuie să corespundă exact numelor fișierelor create mai sus. Fiind scris ultimul, existența lui marchează un onboarding complet.
 - Asigură-te că `my-context/assets/.gitkeep` există.
 
 ## 5. Conectează tool-urile (MCP)
@@ -91,7 +92,18 @@ Dacă userul vrea să sară peste acest pas, notează tool-urile ca „de conect
 
 Urmează secțiunea „Pornire dashboard" din `reference/dashboard.md` (instalează `live-server` dacă lipsește, îl pornește și deschide `dashboard.html` în browser). Apoi spune-i userului, pe scurt: în dashboard, o singură dată, Setări → „📁 Conectează folder" și alege folderul proiectului; dacă browserul oferă „Permite la fiecare vizită", să aleagă asta, ca pagina să se reîncarce singură cu datele noi.
 
-## 7. Confirmare și pasul următor
+## 7. Publicarea contextului pe GitHub (doar owner-ul care instalează)
+
+Hook-ul `.claude/hooks/sync-context.sh` publică automat contextul firmei, dar doar dacă `my-context/` nu mai e ignorat de Git. Ca să-l activezi:
+
+1. AskUserQuestion (Da / Mai târziu): „Vrei ca firma ta să păstreze contextul într-un spațiu comun, ca toată echipa să-l aibă la zi? Îl pot publica automat, dar doar cei care au voie să-l modifice." La „Mai târziu" treci peste tot pasul; se poate relua oricând.
+2. Dacă Da: verifică `git remote get-url origin`.
+   - Lipsește → spune că firma are nevoie de un spațiu comun **privat** al ei și oferă să-l creez (cu `gh repo create --private`), dar numai după confirmare explicită; nu publici nimic fără ea.
+   - Există → arată-i adresa și întreabă dacă e spațiul comun al firmei ei, nu al șablonului (AskUserQuestion Da / Nu). Dacă e al șablonului, nu activa nimic și explică-i să-și creeze unul propriu.
+3. După confirmare, editează `.gitignore`: înlocuiește regulile care ignoră `/my-context/*` și `/team/*` (cu excepțiile lor) cu doar `/my-context/assets/*` și `!/my-context/assets/.gitkeep` (assets/ rămâne în afara Git; se va lega ulterior de un Google Drive). Păstrează ignorat și `/my-context/TASKS.md` (task-urile sunt personale, fiecare își are fișierul lui) și `.env`. Dacă `my-context/TASKS.md` era deja urmărit de Git, scoate-l din urmărire fără să-l ștergi de pe disc: `git rm --cached --ignore-unmatch my-context/TASKS.md`.
+4. Nu face tu primul push; hook-ul îl face la finalul turei, doar pentru owner-i (vezi `reference/sync-conflicts.md`). Spune-i userului pe scurt că de acum contextul se salvează singur și că membrii fără drept de publicare lucrează doar local.
+
+## 8. Confirmare și pasul următor
 
 Install-ul se încheie când tot contextul despre user, business și echipă e în proiect (profil, oameni, proiecte, tool-uri). Nu mai întreba de task-uri și nu începe alte lucruri.
 

@@ -1926,20 +1926,10 @@
               <ol class="command-steps">
                 <li>Povestești liber cum faci procesul azi: ce îl pornește, pașii, aplicațiile, excepțiile.</li>
                 <li>Îți propune ce se poate automatiza și cu ce: skill, conector, API direct sau extensia Chrome.</li>
+                <li>Caută singur conectorii potriviți și verifică dacă sunt sigur de folosit cu datele clienților (DPA, antrenare, rezidență UE).</li>
                 <li>Construiește ce aprobi, verifică pe un exemplu real și notează procesul.</li>
               </ol>
               <div class="command-when"><strong>Când:</strong> după /install, sau oricând ai o treabă repetitivă pe care vrei s-o scoți din mâna ta.</div>
-            </div>
-            <div class="command-card">
-              <div class="command-name">/conectori</div>
-              <div class="command-summary">Găsește singur ce conectori sunt necesari pentru o automatizare și verifică dacă sunt sigur de folosit cu date de client.</div>
-              <ol class="command-steps">
-                <li>Înțelege ce vrei să automatizezi și ce date vor trece prin automatizare.</li>
-                <li>Verifică ce ai deja conectat, apoi caută conectorul potrivit (sau API-ul oficial, sau o alternativă generică).</li>
-                <li>Verifică compliance-ul furnizorului (DPA, antrenare pe datele tale, retenție, rezidență UE) din surse oficiale.</li>
-                <li>Îți propune o listă scurtă și conectează doar ce aprobi.</li>
-              </ol>
-              <div class="command-when"><strong>Când:</strong> un client cere o automatizare (mesaje, email, facturi, imagini, voce) sau vrei să știi dacă un tool e sigur cu datele lui.</div>
             </div>
             <div class="command-card">
               <div class="command-name">/plan <span class="command-badge">nativă Claude Code</span></div>
@@ -3061,7 +3051,16 @@
           // onboarding think TASKS.md already exists.
           const tasksFileHandle = await memoryDir.getFileHandle('TASKS.md');
           await loadTaskFile(tasksFileHandle);
-        } catch (e) { console.log('No my-context/TASKS.md found yet', e); }
+        } catch (e) {
+          console.log('No my-context/TASKS.md found yet', e);
+          // Folderul e conectat, dar utilizatorul nu are încă task-uri (fișierul e personal, nu vine din repo).
+          const emptyBoard = document.getElementById('boardEmptyState');
+          if (emptyBoard) {
+            emptyBoard.querySelector('p').textContent = 'Nu ai încă task-uri. Scrie /planning în conversația cu Claude ca să le adaugi.';
+            const emptyBtn = emptyBoard.querySelector('button');
+            if (emptyBtn) emptyBtn.style.display = 'none';
+          }
+        }
       } catch (e) { console.log('No my-context/ directory found'); }
 
       // team/ = contextul comun al echipei (în git, același la toți colegii).

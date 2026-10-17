@@ -2,7 +2,7 @@
 
 Încărcat la cerere din CLAUDE.md: citesc acest fișier înainte să creez, modific sau execut un task.
 
-Task-urile sunt în `my-context/TASKS.md`, vizualizate în dashboard (vezi `reference/dashboard.md`). Singura sursă de adevăr pentru orice modificare (task-uri, oameni, proiecte, memorie) sunt eu, în sesiune, editând fișierele `.md` direct — userul nu operează pe date din dashboard.
+Task-urile sunt în `my-context/TASKS.md` (personal: în `.gitignore`, nu se publică; dacă lipsește, îl creez gol din `templates/TASKS.template.md`), vizualizate în dashboard (vezi `reference/dashboard.md`). Singura sursă de adevăr pentru orice modificare (task-uri, oameni, proiecte, memorie) sunt eu, în sesiune, editând fișierele `.md` direct — userul nu operează pe date din dashboard.
 
 **Format linie de task**, cu tag-uri opționale la final (orice ordine):
 ```
