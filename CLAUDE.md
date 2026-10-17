@@ -26,7 +26,8 @@ Profilele sunt indexul; detaliile stau în fișiere separate pe care le citesc d
 Legenda lor, pe înțelesul userului, e în dashboard, pagina „Comenzi" — când adaug/modific o comandă, actualizez și acea pagină.
 
 - `/install` — onboarding: întrebări ghidate, conectare MCP-uri, generare `my-context/`, pornire dashboard.
-- `/planning` — adaugă task-uri/rutine noi la `my-context/TASKS.md`, reluând doar partea de task-uri din `/install`.
+- `/planning` — adaugă task-uri noi și task-uri repetitive la `my-context/TASKS.md` (`/install` nu mai întreabă de task-uri).
+- `/process` — userul povestește un proces manual; îl automatizez prin skill-uri (`.claude/skills/`), MCP-uri/conectori, API-uri directe și extensia Chrome. Se sugerează la finalul `/install`.
 - `/conectori` — caut singur conectorii/MCP-urile/API-urile potrivite pentru o automatizare, verific compliance-ul (`reference/compliance.md`) și propun soluția.
 - `/plan` — comanda nativă Claude Code (plan mode): analizez și propun un plan, fără să modific nimic până la aprobare.
 - `/quiz` — întrebări de începător despre AI, interactive, cu explicații și scor.

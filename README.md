@@ -8,7 +8,6 @@ Nu trebuie rulat nimic manual. Deschide folderul cu Claude Code — la prima int
 
 - pe ce lucrezi (context business/proiect, terminologie),
 - cu cine lucrezi (oameni, roluri),
-- ce task-uri ai curent,
 - ce tool-uri folosești (Gmail, Jira, Slack…), ca să conecteze MCP-urile potrivite.
 
 La final pornește un live server (`live-server`, instalat dacă lipsește) și deschide `dashboard.html` în browser.
@@ -22,7 +21,7 @@ Din răspunsuri generează `my-context/profile.md`, `my-context/TASKS.md` și, u
 | `CLAUDE.md` | ✅ | Doar regulile care se aplică mereu + check-ul de onboarding + tabelul „când citesc ce" (se încarcă la fiecare sesiune, deci ținut mic) |
 | `reference/` | ✅ | Detaliile din spatele regulilor (workflow task-uri, personal vs. echipă, skill-uri/playbook-uri, dashboard, compliance furnizori) — citite doar când subiectul apare |
 | `templates/` | ✅ | Șabloane pentru profil, oameni, proiecte, context, task-uri, skill-uri |
-| `.claude/skills/` | ✅ | Comenzile `/install`, `/planning`, `/conectori` și `/quiz` (legenda lor e în dashboard, pagina „Comenzi") |
+| `.claude/skills/` | ✅ | Comenzile `/install`, `/planning`, `/process`, `/conectori` și `/quiz` (legenda lor e în dashboard, pagina „Comenzi") |
 | `playbooks/` | ✅ | Rețete reutilizabile pentru cereri comune de automatizare de la clienți (ex. Instagram DM, WhatsApp, chatbot pe site) — cunoaștere generică, nu date personale |
 | `dashboard.html` | ✅ | Unealtă generică, read-only — citesc fișierele locale direct, fără server. Nicio modificare (task-uri, oameni, proiecte) nu se face din dashboard; toate vin din sesiunile de Claude Code |
 | `my-context/profile.md` | ❌ | Contextul tău personal/de business (Me/People/Terms/Projects/Preferences) |

@@ -1901,23 +1901,34 @@
               <div class="command-name">/install</div>
               <div class="command-summary">Setup inițial: te cunoaște, îți pregătește spațiul de lucru și deschide acest dashboard.</div>
               <ol class="command-steps">
-                <li>Te întreabă, pe rând: domeniu, rol, echipă, oameni cheie, proiecte, task-uri curente, tool-uri folosite, stil de comunicare.</li>
+                <li>Te întreabă, pe rând: domeniu, rol, echipă, oameni cheie, proiecte, tool-uri folosite, stil de comunicare.</li>
                 <li>Pe baza tool-urilor alese (Gmail, Jira, Slack…) îți propune conectorii potriviți și îi conectează doar pe cei pe care îi aprobi.</li>
-                <li>Generează din șabloane profilul, fișa fiecărei persoane și a fiecărui proiect și lista de task-uri.</li>
+                <li>Generează din șabloane profilul și fișa fiecărei persoane și a fiecărui proiect.</li>
                 <li>Pornește live server-ul și deschide dashboard-ul în browser.</li>
+                <li>Încheie propunând /process, ca primul lucru de automatizat.</li>
               </ol>
               <div class="command-when"><strong>Când:</strong> prima dată, sau când vrei să refaci contextul. Pornește și singur dacă nu există încă un profil.</div>
             </div>
             <div class="command-card">
               <div class="command-name">/planning</div>
-              <div class="command-summary">Reia doar partea de task-uri/rutine din /install — nu tot onboarding-ul, doar ce mai ai de făcut.</div>
+              <div class="command-summary">Adaugă task-uri noi și task-uri repetitive. /install nu mai întreabă de ele, deci aici le notezi.</div>
               <ol class="command-steps">
-                <li>Îți arată pe scurt ce task-uri/rutine ai deja active.</li>
-                <li>Te întreabă, pe rând, ce task-uri noi ai și dacă e ceva recurent (o rutină).</li>
+                <li>Îți arată pe scurt ce task-uri și task-uri repetitive ai deja active.</li>
+                <li>Te întreabă, pe rând, ce task-uri noi ai și dacă e ceva care se repetă (un task repetitiv).</li>
                 <li>Le adaugă în TASKS.md, cu ID-uri continuând numerotarea existentă.</li>
                 <li>Semnalează care par ceva ce poate face direct și oferă să înceapă pe loc.</li>
               </ol>
               <div class="command-when"><strong>Când:</strong> ai lucruri noi de adăugat pe agendă, fără să refaci tot setup-ul. Necesită un profil deja creat (rulează întâi /install).</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/process</div>
+              <div class="command-summary">Povestești un proces pe care îl faci manual, iar Claude îl automatizează.</div>
+              <ol class="command-steps">
+                <li>Povestești liber cum faci procesul azi: ce îl pornește, pașii, aplicațiile, excepțiile.</li>
+                <li>Îți propune ce se poate automatiza și cu ce: skill, conector, API direct sau extensia Chrome.</li>
+                <li>Construiește ce aprobi, verifică pe un exemplu real și notează procesul.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> după /install, sau oricând ai o treabă repetitivă pe care vrei s-o scoți din mâna ta.</div>
             </div>
             <div class="command-card">
               <div class="command-name">/conectori</div>
