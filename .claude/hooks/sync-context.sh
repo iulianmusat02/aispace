@@ -24,14 +24,17 @@ say() { printf '{"systemMessage": "%s"}\n' "$1"; }
 PATHS=(); for d in my-context team .claude/skills .gitignore .claude/template-manifest.txt; do [ -e "$d" ] && PATHS+=("$d"); done   # git add pică dacă o cale lipsește
 [ ${#PATHS[@]} -gt 0 ] || exit 0
 
-# --- doar owner-ii publică: emailul din git trebuie să apară într-o fișă cu „Poate face push: da"
+# --- doar owner-ii publică: emailul din git, exact, pe rândul „Email:" al unei fișe cu „Poate face push: da".
+# E o regulă de lucru, nu un control de acces: controlul real e accesul de scriere pe GitHub (reference/roluri.md).
 EMAIL=$(git config user.email 2>/dev/null)
 is_owner() {
-  [ -n "$EMAIL" ] || return 1
-  local f
+  printf '%s' "$EMAIL" | grep -Eq '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' || return 1
+  local f email_re
+  email_re=$(printf '%s' "$EMAIL" | sed 's/[][\.^$*+?(){}|/]/\\&/g')
   for f in my-context/profile.md my-context/people/*.md team/profile.md team/people/*.md; do
     [ -f "$f" ] || continue
-    grep -qiF -- "$EMAIL" "$f" && grep -qiE 'Poate face push:?\*\*:? *da' "$f" && return 0
+    grep -qiE "^[[:space:]]*[-*]?[[:space:]]*\**Email:?\**:?[[:space:]]*<?${email_re}>?[[:space:]]*$" "$f" \
+      && grep -qiE 'Poate face push:?\*\*:? *da' "$f" && return 0
   done
   return 1
 }
@@ -48,11 +51,12 @@ if git diff --cached --name-only | grep -Ev '^(my-context/|team/|\.claude/skills
   exit 0
 fi
 
+
+# plasă de siguranță: secretele ar trebui să fie oricum doar în .env (verific și indexul, și tot ce urmează să plece)
+PATTERN='(sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|://[^/[:space:]]+:[^@/[:space:]]+@|(API_KEY|SECRET|TOKEN|PASSWORD)[A-Za-z_]*[[:space:]]*[=:][[:space:]]*[^[:space:]]{8,})'
 if ! git diff --cached --quiet; then
-  # plasă de siguranță: secretele ar trebui să fie oricum doar în .env
-  PATTERN='(sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|://[^/[:space:]]+:[^@/[:space:]]+@|(API_KEY|SECRET|TOKEN|PASSWORD)[A-Za-z_]*[[:space:]]*[=:][[:space:]]*[^[:space:]]{8,})'
   if git diff --cached -U0 --text | grep -E '^\+' | grep -Eiq "$PATTERN"; then
-    git reset -q >/dev/null 2>&1
+    git restore --staged -- "${PATHS[@]}" >/dev/null 2>&1
     say "Nimic nu a fost publicat: pare că există un secret în context (cheie, token, parolă). Mută-l în .env și reîncearcă."
     exit 0
   fi
@@ -68,7 +72,7 @@ if git rev-parse -q --verify "origin/$BR" >/dev/null 2>&1; then
   AHEAD=$(git rev-list --count "origin/$BR..HEAD")
   [ "$BEHIND" = 0 ] && [ "$AHEAD" = 0 ] && exit 0
   if [ "$BEHIND" -gt 0 ] && ! git merge -q --no-edit "origin/$BR" >/dev/null 2>&1; then
-    CONFLICTS=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+    CONFLICTS=$(git diff --name-only --diff-filter=U | tr '\n' ' ' | tr -cd 'A-Za-z0-9._/ -' | cut -c1-300)   # nume sigure în JSON
     git merge --abort >/dev/null 2>&1
     if [ -n "$CONFLICTS" ] && ! printf '%s' "$INPUT" | grep -Eq '"stop_hook_active" *: *true'; then
       printf '{"decision": "block", "reason": "Sincronizarea contextului a gasit conflicte cu trunk-ul (%s). Urmeaza reference/sync-conflicts.md: rezolva singur ce nu se contrazice, iar unde informatiile se suprapun lasa userul sa aleaga."}\n' "${CONFLICTS% }"
@@ -81,6 +85,11 @@ if git rev-parse -q --verify "origin/$BR" >/dev/null 2>&1; then
   [ "$AHEAD" = 0 ] && exit 0
 fi
 
+if git rev-parse -q --verify "origin/$BR" >/dev/null 2>&1; then OUTGOING="origin/$BR..HEAD"; else OUTGOING="HEAD"; fi
+if git log -p --text --format= "$OUTGOING" 2>/dev/null | grep -E '^\+' | grep -Eiq "$PATTERN"; then
+  say "Nimic nu a fost publicat: în ce urmează să plece pe GitHub pare să existe un secret (cheie, token, parolă). Mută-l în .env și scoate-l din istoric înainte să publici."
+  exit 0
+fi
 if git push -q origin HEAD >/dev/null 2>&1; then
   say "Contextul firmei a fost publicat pe GitHub."
 else

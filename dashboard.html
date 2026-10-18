@@ -3195,6 +3195,8 @@
 
     async function loadMemoryFromDirHandle(handle) {
       memoryDirHandle = handle;
+      // biroul 3D (iframe-ul din tab-ul Birou) primește același folder, ca să-l citească direct
+      try { document.getElementById('officeFrame').contentWindow.postMessage({ type: 'aios:folder', handle }, location.origin); } catch (e) {}
 
       memoryData = { claudeMd: null, memoryFiles: [], memoryDirs: {} };
 
@@ -4238,6 +4240,12 @@
     }
 
     tryAutoReconnect();
+    // biroul 3D cere folderul când se încarcă
+    window.addEventListener('message', e => {
+      if (e.origin === location.origin && e.data && e.data.type === 'aios:need-folder' && memoryDirHandle) {
+        try { e.source.postMessage({ type: 'aios:folder', handle: memoryDirHandle }, location.origin); } catch (err) {}
+      }
+    });
     applyRouteFromHash();
   </script>
 </body>

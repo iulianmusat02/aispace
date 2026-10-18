@@ -165,6 +165,8 @@
   .dots button.done { background: #8FB3A8; }
   .dots button.on { background: var(--saffron); transform: scale(1.25); }
 
+  #folderPill { position: fixed; bottom: 64px; left: 50%; transform: translateX(-50%); padding: 10px 18px; border-radius: 999px; font-weight: 500; z-index: 6; align-items: center; gap: 8px; color: var(--pine); }
+  #folderPill:hover { box-shadow: 0 0 0 2px rgba(31,92,79,.35), var(--shadow); }
   #hint { position: fixed; left: 14px; bottom: 14px; padding: 12px 16px; max-width: 360px; color: var(--ink-soft); display: none; z-index: 5; }
   #fallback { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 420px; padding: 20px 22px; display: none; z-index: 4; }
   #fallback p { color: var(--ink-soft); margin-bottom: 12px; }
@@ -225,6 +227,7 @@
   <div class="panel-body" id="panelBody"></div>
 </aside>
 
+<button id="folderPill" class="card" style="display:none">Biroul nu poate citi folderul proiectului. Apasă ca să-i dai acces (o dată pe sesiune).</button>
 <div id="setupPill">Încă nu e configurat. Scrie /install în Claude Code, apoi deschide din nou pagina.</div>
 <div id="hint" class="card">Trage ca să te uiți în jur, folosește rotița ca să apropii. Apasă pe o cameră ca să vezi ce e în ea.</div>
 <div id="fallback" class="card">
@@ -509,13 +512,175 @@
     s.onerror = () => { s.remove(); done(false); };
     document.head.appendChild(s);
   }
-  let dataSig = '';
-  function pollData() {
-    load('live/data.js', () => {
-      const sig = JSON.stringify(window.AIOS_DATA || null);
-      if (sig !== dataSig || !UI.data) { dataSig = sig; UI.data = normalizeData(window.AIOS_DATA); renderChrome(); UI.emit('data', UI.data); }
-      setTimeout(pollData, 20000);
+  // ---------- citirea directă a folderului proiectului (ca dashboard-ul) ----------
+  // Dashboard-ul păstrează accesul la folder în IndexedDB ('productivity-dashboard' / 'handles' / 'memoryDir').
+  // Biroul e pe aceeași adresă, deci îl refolosește: din folder citește tot ce ține de proiect, la câteva secunde.
+  // Din hook (live/data.js) rămân doar lucrurile din afara folderului: conectori, routines, istoric git.
+  let rootHandle = null, folderData = null;
+  function idbHandle() {
+    return new Promise(resolve => {
+      try {
+        const req = indexedDB.open('productivity-dashboard', 1);
+        req.onupgradeneeded = () => req.result.createObjectStore('handles');
+        req.onsuccess = () => {
+          try {
+            const r = req.result.transaction('handles', 'readonly').objectStore('handles').get('memoryDir');
+            r.onsuccess = () => resolve(r.result || null); r.onerror = () => resolve(null);
+          } catch (e) { resolve(null); }
+        };
+        req.onerror = () => resolve(null);
+      } catch (e) { resolve(null); }
     });
+  }
+  async function dirAt(path) {
+    let d = rootHandle;
+    for (const part of path.split('/').filter(Boolean)) { try { d = await d.getDirectoryHandle(part); } catch (e) { return null; } }
+    return d;
+  }
+  async function readText(path) {
+    const parts = path.split('/'), name = parts.pop();
+    const d = await dirAt(parts.join('/')); if (!d) return null;
+    try { return await (await d.getFileHandle(name)).getFile().then(f => f.text()); } catch (e) { return null; }
+  }
+  async function exists(path) { return (await readText(path)) !== null; }
+  async function list(path, kind) {
+    const d = await dirAt(path); if (!d) return [];
+    const out = [];
+    try { for await (const [n, h] of d.entries()) if (!kind || h.kind === kind) out.push(n); } catch (e) {}
+    return out.sort();
+  }
+  // aceleași reguli ca în .claude/hooks/explorer-live.py
+  const stripMd = t => (t || '').replace(/\[\[([^\]]+)\]\]/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[*_`]/g, '').trim();
+  const noComments = t => (t || '').replace(/<!--[\s\S]*?-->/g, '');
+  function sectionOf(text, h) {
+    const m = (text || '').match(new RegExp('^## ' + h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$([\\s\\S]*?)(?=^## |(?![\\s\\S]))', 'm'));
+    return m ? m[1] : '';
+  }
+  function tableRows(block) {
+    return (block || '').split('\n').map(l => l.trim()).filter(l => l.startsWith('|') && !/^\|[\s:|-]+\|$/.test(l))
+      .map(l => l.replace(/^\||\|$/g, '').split('|').map(stripMd)).slice(1);
+  }
+  function frontmatterOf(text) {
+    const m = (text || '').match(/^---\n([\s\S]*?)\n---/); const fm = {};
+    if (m) m[1].split('\n').forEach(l => { const i = l.indexOf(':'); if (i > 0) fm[l.slice(0, i).trim()] = l.slice(i + 1).trim().replace(/^"|"$/g, ''); });
+    return fm;
+  }
+  function mdInfo(path, text) {
+    const lines = noComments(text).split('\n');
+    const t = lines.find(l => l.startsWith('# '));
+    const sum = lines.find(l => l.trim() && !/^(#|\||---|>)/.test(l));
+    return { file: path, title: t ? stripMd(t.slice(2)) : path.split('/').pop(), summary: sum ? stripMd(sum.replace(/^\s*[-*]\s+/, '')).slice(0, 160) : '',
+      lines: text.split('\n').filter(l => l.trim()).length };
+  }
+  function skillEntry(name, desc, template) {
+    const w = desc.match(/Folosește-l când (.*?)(?:\.|$)/);
+    return { name, who: /doar pentru owner/i.test(desc) ? 'owner' : 'toți', when: w ? w[1].trim() : '', description: desc.split(/(?<=\.)\s/)[0], template };
+  }
+  const EVENT_RO = { SessionStart: 'la pornirea unei sesiuni', UserPromptSubmit: 'la fiecare mesaj trimis', PreToolUse: 'înainte de o acțiune', PostToolUse: 'după o acțiune',
+    Notification: 'la notificări', Stop: 'la finalul fiecărui răspuns', SubagentStop: 'când termină un ajutor', SessionEnd: 'la închiderea sesiunii', PreCompact: 'înainte de rezumarea conversației' };
+  async function readFolder() {
+    const d = {};
+    const teamText = await readText('team/profile.md') || '', meText = await readText('my-context/profile.md');
+    d.setUp = meText !== null;
+    const me = meText || '';
+    // firma
+    const comp = sectionOf(teamText, 'Compania').split('\n').filter(l => l.trim() && !l.trim().startsWith('<!--'));
+    let line = comp.length ? stripMd(comp[0]) : '', name = line ? line.split(/\s+[—-]\s+/)[0] : '';
+    if (!name) for (const [text, base] of [[teamText, 'team'], [me, 'my-context']]) {
+      const rows = tableRows(sectionOf(text, 'Projects').split('### Module')[0]);
+      if (rows[0] && rows[0][0]) {
+        const card = await readText(`${base}/projects/${rows[0][0]}.md`) || '';
+        const t = card.match(/^# (.+)$/m); name = t ? stripMd(t[1]) : rows[0][0]; line = rows[0][1] || ''; break;
+      }
+    }
+    d.company = { name, about: line };
+    // cunoștințe
+    const ctxPaths = ['team/profile.md', ...(await list('team/projects', 'file')).map(n => 'team/projects/' + n), 'my-context/profile.md',
+      ...(await list('my-context/projects', 'file')).map(n => 'my-context/projects/' + n), ...(await list('my-context/context', 'file')).map(n => 'my-context/context/' + n)];
+    d.context = [];
+    for (const p of ctxPaths.filter(p => p.endsWith('.md'))) { const t = await readText(p); if (t !== null) d.context.push(mdInfo(p, t)); }
+    // skill-uri
+    const manifest = await readText('.claude/template-manifest.txt') || '';
+    d.skills = [];
+    for (const dir of await list('.claude/skills', 'directory')) {
+      const t = await readText(`.claude/skills/${dir}/SKILL.md`); if (t === null) continue;
+      const fm = frontmatterOf(t);
+      d.skills.push(skillEntry(fm.name || dir, fm.description || '', manifest ? manifest.includes(`.claude/skills/${dir}/SKILL.md`) : true));
+    }
+    for (const base of ['team/skills', 'my-context/skills']) for (const n of (await list(base, 'file')).filter(n => n.endsWith('.md'))) {
+      const t = await readText(`${base}/${n}`) || '', fm = frontmatterOf(t), info = mdInfo(`${base}/${n}`, t);
+      d.skills.push(Object.assign(skillEntry(fm.name || n.replace(/\.md$/, ''), fm.description || info.summary, false), { file: info.file, personal: base.startsWith('my-context') }));
+    }
+    // echipa
+    const pushDa = /Poate face push:?\*?\*?:? *da/i, seen = new Set();
+    d.team = [];
+    for (const text of [teamText, me]) for (const row of tableRows(sectionOf(text, 'People'))) {
+      if (!row[0]) continue;
+      const meRow = row[0].startsWith('(Eu)');
+      let nm = row[0].replace(/^\(Eu\)\s*/, '').trim();
+      const slug = nm.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
+      const card = await readText(`team/people/${slug}.md`) || await readText(`my-context/people/${slug}.md`) || '';
+      const t = card.match(/^# (.+)$/m);
+      if (t && /^[a-z0-9-]+$/.test(nm)) nm = stripMd(t[1]);
+      if (seen.has(nm.toLowerCase())) continue; seen.add(nm.toLowerCase());
+      d.team.push({ name: nm, role: row[1] || '', admin: pushDa.test(card) || (meRow && pushDa.test(sectionOf(me, 'Me'))) });
+    }
+    // hook-uri
+    const hooks = {};
+    for (const [file, local] of [['.claude/settings.json', false], ['.claude/settings.local.json', true]]) {
+      let cfg; try { cfg = JSON.parse(await readText(file) || '{}'); } catch (e) { continue; }
+      for (const [ev, entries] of Object.entries(cfg.hooks || {})) for (const en of entries || []) for (const h of en.hooks || []) {
+        const m = (h.command || '').match(/\.claude\/hooks\/([\w.-]+)/), key = m ? m[1] : (h.command || '').slice(0, 40);
+        if (!hooks[key]) {
+          const src = m ? await readText(`.claude/hooks/${m[1]}`) || '' : '';
+          const sm = src.match(/Pe scurt:\s*(.+)/);
+          hooks[key] = { name: m ? key.replace(/\.[^.]+$/, '') : key, file: m ? `.claude/hooks/${m[1]}` : '', summary: sm ? sm[1].trim() : '',
+            template: !local && (manifest ? manifest.includes(`.claude/hooks/${m && m[1]}`) : !!m), personal: local, when: [] };
+        }
+        let when = EVENT_RO[ev] || ev; const mt = en.matcher || '';
+        if ((ev === 'PreToolUse' || ev === 'PostToolUse') && mt && mt !== '*') {
+          const parts = new Set(mt.split('|')), pre = ev === 'PreToolUse' ? 'înainte' : 'după';
+          if ([...parts].every(x => ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(x))) when = `${pre} de editarea unui fișier`;
+          else if (parts.size === 1 && parts.has('Skill')) when = `${pre} de pornirea unui skill`;
+          else if (parts.size === 1 && parts.has('Bash')) when = `${pre} de o comandă în terminal`;
+          else when += ` (${mt.split('|').join(', ')})`;
+        }
+        if (!hooks[key].when.includes(when)) hooks[key].when.push(when);
+      }
+    }
+    d.hooks = Object.values(hooks);
+    d.inboxCount = (await list('my-context/assets')).filter(n => !n.startsWith('.')).length;
+    d.hasEnv = await exists('.env');
+    const mf = noComments(sectionOf(me, 'Me')).split('\n').map(l => l.trim()).find(l => l && !l.startsWith('-')) || '';
+    const vm = mf.match(/^\*\*([^*]+)\*\*/) || mf.match(/^([^,—–(]+)/);
+    if (vm && vm[1].trim().length <= 40) d.viewer = { name: vm[1].trim() };
+    return d;
+  }
+  async function connectFolder(interactive) {
+    if (!('showDirectoryPicker' in window)) return false;
+    rootHandle = rootHandle || await idbHandle();
+    if (!rootHandle) return false;
+    let perm = 'denied';
+    try { perm = await rootHandle.queryPermission({ mode: 'read' }); if (perm !== 'granted' && interactive) perm = await rootHandle.requestPermission({ mode: 'read' }); } catch (e) {}
+    $('folderPill').style.display = perm === 'granted' ? 'none' : 'flex';
+    return perm === 'granted';
+  }
+  async function pollFolder() {
+    try {
+      if (await connectFolder(false)) { folderData = await readFolder(); refreshData(); }
+    } catch (e) { console.warn('Folderul nu a putut fi citit', e); }
+    setTimeout(pollFolder, 5000);
+  }
+  UI.connectFolder = async () => { if (await connectFolder(true)) { folderData = await readFolder(); refreshData(); } };
+  // datele finale: ce vine din folder are prioritate; din hook rămân conectorii, routines, istoricul, munca nesalvată
+  let dataSig = '';
+  function refreshData() {
+    const merged = Object.assign({}, window.AIOS_DATA || {}, folderData || {});
+    const sig = JSON.stringify(merged);
+    if (sig !== dataSig || !UI.data) { dataSig = sig; UI.data = normalizeData(merged); renderChrome(); UI.emit('data', UI.data); }
+  }
+  function pollData() {
+    load('live/data.js', () => { refreshData(); setTimeout(pollData, 20000); });
   }
   let liveFails = 0, liveSig = '';
   function pollLive() {
@@ -927,6 +1092,16 @@
   renderGuideList();
   setMode('guides');
   pollData();
+  pollFolder();
+  $('folderPill').addEventListener('click', () => UI.connectFolder());
+  // dashboard-ul anunță când a fost conectat sau reconectat folderul
+  window.addEventListener('message', async e => {
+    if (e.origin !== location.origin || !e.data || e.data.type !== 'aios:folder' || !e.data.handle) return;
+    rootHandle = e.data.handle;
+    if (await connectFolder(false)) { folderData = await readFolder(); refreshData(); }
+  });
+  // când iframe-ul se încarcă după ce dashboard-ul era deja conectat, cer folderul de la el
+  try { if (window.parent !== window) window.parent.postMessage({ type: 'aios:need-folder' }, location.origin); } catch (e) {}
   pollLive();
 })();
 </script>
