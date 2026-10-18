@@ -2,7 +2,7 @@
 
 - **Slug**: <kebab-case, după tipul procesului, nu după client>
 - **Ultima actualizare**: YYYY-MM-DD
-- **Stare**: descris | automatizare propusă | în construcție | activ | oprit
+- **Stare**: cerere (de la un membru) | descris | automatizare propusă | în construcție | activ | oprit
 - **Responsabil**: [[slug-persoană]]
 - **Frecvență / timp azi**: <ex. zilnic, 30 min>
 - **Date sensibile**: da / nu — <ce fel>

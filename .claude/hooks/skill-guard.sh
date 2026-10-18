@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
+# Pe scurt: înainte să pornească un skill al firmei, verifică să nu conțină instrucțiuni suspecte; dacă găsește ceva, îți cere aprobarea.
 # PreToolUse (Skill): paza de prompt injection la apelarea unui skill al proiectului.
 # Dacă SKILL.md conține semne suspecte, cere explicit aprobarea userului și îi arată ce a găsit.
 # Nu blochează nimic singur și iese mereu cu 0. Skill-urile livrate cu șablonul (install, planning,
-# process, quiz) sunt sărite; pentru ele răspunde proprietarul repo-ului la review-ul modificărilor.
+# process, recommend-process, quiz, guide, add-context, sync, history, add-teammate, update-template) sunt sărite; pentru ele răspunde proprietarul repo-ului la review-ul modificărilor.
 
 trap 'exit 0' EXIT
 INPUT=$(cat 2>/dev/null)
 SKILL=$(printf '%s' "$INPUT" | sed -n 's/.*"skill" *: *"\([^"]*\)".*/\1/p' | head -1)
 SKILL=${SKILL##*:}
 [ -n "$SKILL" ] || exit 0
-case "$SKILL" in install|planning|process|quiz) exit 0;; esac
+case "$SKILL" in install|planning|process|recommend-process|quiz|guide|add-context|sync|history|add-teammate|update-template) exit 0;; esac
 FILE="${CLAUDE_PROJECT_DIR:-.}/.claude/skills/$SKILL/SKILL.md"
 [ -f "$FILE" ] || exit 0
 

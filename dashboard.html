@@ -854,6 +854,18 @@
       gap: 16px;
     }
 
+    /* Conectori: aceleași date ca biroul 3D (explorer/live/data.js, scris de hook-ul explorer-live.py) */
+    .connector-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; }
+    .connector-logo { position: relative; flex-shrink: 0; width: 36px; height: 36px; border-radius: 9px; background: var(--bg-secondary); color: var(--text-secondary); font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-light); }
+    .connector-logo i { position: absolute; inset: 8px; -webkit-mask: var(--src) center / contain no-repeat; mask: var(--src) center / contain no-repeat; background: var(--brand); display: none; }
+    .connector-name { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+    .connector-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .connector-status { font-size: 12px; color: var(--text-secondary); margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+    .connector-dot { width: 8px; height: 8px; border-radius: 50%; background: #c4c4c2; flex-shrink: 0; }
+    .connector-dot.used { background: #1F5C4F; box-shadow: 0 0 0 3px rgba(31,92,79,.15); }
+    .connector-dot.off { background: #D64550; }
+    .connector-note { font-size: 12px; color: var(--text-muted); margin: -4px 0 12px; }
+
     .commands-intro {
       color: var(--text-muted);
       font-size: 13px;
@@ -1783,6 +1795,8 @@
         <button id="tasksTabBtn" class="active">Task-uri</button>
         <button id="teamTabBtn">Echipă</button>
         <button id="commandsTabBtn">Comenzi</button>
+        <button id="connectorsTabBtn">Conectori</button>
+        <button id="officeTabBtn">Birou</button>
       </div>
       <div class="view-toggle" id="taskViewToggle">
         <button id="boardViewBtn" class="active">Panou</button>
@@ -1800,6 +1814,18 @@
       </div>
     </div>
   </header>
+
+  <!-- CONECTORI: din explorer/live/data.js (hook-ul .claude/hooks/explorer-live.py) -->
+  <div class="tab-panel" id="connectorsPanel">
+    <div class="memory-content-area">
+      <div style="padding: 20px;" id="connectorsContent"></div>
+    </div>
+  </div>
+
+  <!-- BIROU 3D: explorer/index.html, încărcat doar la prima deschidere a tab-ului -->
+  <div class="tab-panel" id="officePanel">
+    <iframe id="officeFrame" title="Biroul AI" allow="clipboard-write" style="flex: 1; width: 100%; border: 0; border-radius: 14px; background: #E6ECEF;"></iframe>
+  </div>
 
   <!-- TASKS TAB PANEL -->
   <div class="tab-panel active" id="tasksPanel">
@@ -1922,14 +1948,85 @@
             </div>
             <div class="command-card">
               <div class="command-name">/process</div>
-              <div class="command-summary">Povestești un proces pe care îl faci manual, iar Claude îl automatizează.</div>
+              <div class="command-summary">Skill-uri și automatizări pentru firmă: povestești un proces pe care îl faci manual, sau spui direct ce skill vrei.</div>
               <ol class="command-steps">
-                <li>Povestești liber cum faci procesul azi: ce îl pornește, pașii, aplicațiile, excepțiile.</li>
+                <li>Povestești liber cum faci procesul azi: ce îl pornește, pașii, aplicațiile, excepțiile. Sau descrii skill-ul pe care îl vrei.</li>
                 <li>Îți propune ce se poate automatiza și cu ce: skill, conector, API direct sau extensia Chrome.</li>
                 <li>Caută singur conectorii potriviți și verifică dacă sunt sigur de folosit cu datele clienților (DPA, antrenare, rezidență UE).</li>
                 <li>Construiește ce aprobi, verifică pe un exemplu real și notează procesul.</li>
               </ol>
-              <div class="command-when"><strong>Când:</strong> după /install, sau oricând ai o treabă repetitivă pe care vrei s-o scoți din mâna ta.</div>
+              <div class="command-when"><strong>Când:</strong> după /install, oricând ai o treabă repetitivă pe care vrei s-o scoți din mâna ta, sau vrei o comandă ori un mod de lucru reutilizabil. Doar owner-ii construiesc; membrii primesc o cerere de trimis unui owner.</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/recommend-process</div>
+              <div class="command-summary">Îți spune ce merită automatizat, pe baza a ce știe despre firmă și a ce afla de la tine.</div>
+              <ol class="command-steps">
+                <li>Citește contextul: firma, echipa, proiectele, tool-urile, task-urile care se repetă, procesele deja automatizate.</li>
+                <li>Te întreabă cel mult 3 lucruri, doar ce lipsește (unde pierzi timp, ce copiezi de mână).</li>
+                <li>Îți arată top 3 idei, cu timpul economisit, efortul și riscul pentru datele clienților.</li>
+                <li>Ideea aleasă o predă lui /process, cu povestea deja adunată. Ține minte ce ai refuzat și de ce.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> nu știi ce să automatizezi, sau vrei să vezi unde se pierde timp. Lista de idei crește de la o folosire la alta.</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/guide</div>
+              <div class="command-summary">Explică ce e AISpace, ce poți folosi tu și ce e bine să faci mai departe.</div>
+              <ol class="command-steps">
+                <li>Află dacă ești owner sau membru.</li>
+                <li>Îți arată doar comenzile și skill-urile rolului tău.</li>
+                <li>Propune un singur pas următor, potrivit cu situația ta.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> ești nou în echipă sau nu știi de unde să începi.</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/add-context</div>
+              <div class="command-summary">Adaugă în contextul firmei cunoștințe din linkuri, documente sau memoria altui AI. Doar owner.</div>
+              <ol class="command-steps">
+                <li>Citește sursele și ignoră instrucțiunile ascunse în ele.</li>
+                <li>Îți arată ce intră unde și ce lasă pe dinafară (date personale, secrete).</li>
+                <li>Scrie abia după ce aprobi și te întreabă ce face cu fișierele procesate.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> ai documentație, notițe sau un rezumat de la alt AI de încărcat.</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/sync</div>
+              <div class="command-summary">Publică modificările contextului (owner) și le primește pe ale colegilor (toți).</div>
+              <ol class="command-steps">
+                <li>Verifică să nu existe date personale sau chei în ce se publică.</li>
+                <li>Scrie o notă clară: ce, de ce, cine a cerut.</li>
+                <li>Primește întâi modificările celorlalți; la rânduri schimbate de doi oameni, alegi tu ce rămâne.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> vrei să publici acum cu o notă bună, sau să primești ultimele modificări.</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/history</div>
+              <div class="command-summary">Răspunde la „ce s-a schimbat, când, cine și de ce", în cuvinte simple.</div>
+              <ol class="command-steps">
+                <li>Citește istoricul salvărilor, fără să modifice nimic.</li>
+                <li>Îți dă o listă scurtă, pe zile și autori.</li>
+                <li>Un owner poate restaura o versiune veche, ca modificare nouă.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> vrei să știi cine a schimbat ceva sau să revii la o versiune anterioară.</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/add-teammate</div>
+              <div class="command-summary">Adaugă un om în echipă, cu accesul potrivit, sau tratează o plecare. Doar owner.</div>
+              <ol class="command-steps">
+                <li>Îi face fișa și stabilește dacă poate publica sau doar citi.</li>
+                <li>Îl invită pe GitHub, după confirmarea ta.</li>
+                <li>Scrie mesajul de bun venit, cu un singur lucru de lipit în AI-ul lui.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> vine sau pleacă cineva din echipă.</div>
+            </div>
+            <div class="command-card">
+              <div class="command-name">/update-template</div>
+              <div class="command-summary">Aduce o versiune nouă a șablonului, fără să atingă ce a modificat firma. Doar owner.</div>
+              <ol class="command-steps">
+                <li>Compară fișier cu fișier cu versiunea livrată inițial.</li>
+                <li>Înlocuiește doar ce n-ai modificat; pentru restul arată ambele versiuni.</li>
+                <li>Cere un Da separat pentru scripturile care pornesc singure.</li>
+              </ol>
+              <div class="command-when"><strong>Când:</strong> apare o versiune nouă a șablonului AISpace.</div>
             </div>
             <div class="command-card">
               <div class="command-name">/plan <span class="command-badge">nativă Claude Code</span></div>
@@ -2023,6 +2120,10 @@
     const teamTabBtn = document.getElementById('teamTabBtn');
     const projectsTabBtn = document.getElementById('projectsTabBtn');
     const commandsTabBtn = document.getElementById('commandsTabBtn');
+    const officeTabBtn = document.getElementById('officeTabBtn');
+    const connectorsTabBtn = document.getElementById('connectorsTabBtn');
+    const connectorsPanel = document.getElementById('connectorsPanel');
+    const officePanel = document.getElementById('officePanel');
     const commandsPanel = document.getElementById('commandsPanel');
     const tasksPanel = document.getElementById('tasksPanel');
     const memoryPanel = document.getElementById('memoryPanel');
@@ -2063,6 +2164,8 @@
       teamTabBtn.classList.toggle('active', tab === 'team');
       projectsTabBtn.classList.toggle('active', tab === 'projects');
       commandsTabBtn.classList.toggle('active', tab === 'commands');
+      officeTabBtn.classList.toggle('active', tab === 'office');
+      connectorsTabBtn.classList.toggle('active', tab === 'connectors');
 
       tasksPanel.classList.toggle('active', tab === 'tasks');
       memoryPanel.classList.toggle('active', tab === 'memory');
@@ -2070,6 +2173,8 @@
       projectsPanel.classList.toggle('active', tab === 'projects');
       teamPanel.classList.toggle('active', tab === 'team');
       commandsPanel.classList.toggle('active', tab === 'commands');
+      officePanel.classList.toggle('active', tab === 'office');
+      connectorsPanel.classList.toggle('active', tab === 'connectors');
 
       // Toggle-ul Panou/Listă n-are sens pe Recurente (nu au coloane de
       // status), deci apare doar pe Task-uri > Punctuale.
@@ -2088,6 +2193,11 @@
       if (tab === 'projects') renderProjects();
       if (tab === 'team') renderTeam();
       if (tab === 'commands') renderLearnedSkills();
+      if (tab === 'connectors') loadConnectors();
+      if (tab === 'office') {
+        const frame = document.getElementById('officeFrame');
+        if (!frame.src) frame.src = 'explorer/index.html';
+      }
 
       if (!skipHash) updateHash();
     }
@@ -2105,6 +2215,8 @@
     teamTabBtn.addEventListener('click', () => switchMainTab('team'));
     projectsTabBtn.addEventListener('click', () => switchMainTab('projects'));
     commandsTabBtn.addEventListener('click', () => switchMainTab('commands'));
+    officeTabBtn.addEventListener('click', () => switchMainTab('office'));
+    connectorsTabBtn.addEventListener('click', () => switchMainTab('connectors'));
     taskTypePunctualBtn.addEventListener('click', () => setTaskTypeFilter('punctual'));
     taskTypeRecurrentBtn.addEventListener('click', () => setTaskTypeFilter('recurrent'));
 
@@ -2112,7 +2224,7 @@
     // restaurează exact tab-ul (+ subtab-ul de tasks) de dinainte.
     function applyRouteFromHash() {
       const parts = (location.hash || '').replace(/^#\/?/, '').split('/').filter(Boolean);
-      const knownTabs = ['tasks', 'memory', 'people', 'projects', 'team', 'commands'];
+      const knownTabs = ['tasks', 'memory', 'people', 'projects', 'team', 'commands', 'office', 'connectors'];
       const tab = knownTabs.includes(parts[0]) ? parts[0] : 'tasks';
       if (tab === 'tasks' && (parts[1] === 'recurrent' || parts[1] === 'punctual')) {
         taskTypeFilter = parts[1];
@@ -2123,6 +2235,97 @@
       updateHash();
     }
     window.addEventListener('hashchange', applyRouteFromHash);
+
+    // ===== CONECTORI =====
+    // Citesc explorer/live/data.js prin <script> (merge și pe file://, fără fetch). Datele conțin doar
+    // numele, sursa și tipul conectorilor; nu și adrese sau chei.
+    const CONNECTOR_SOURCES = [
+      ['proiect', 'Ai proiectului', 'Salvați în proiect, în .mcp.json. Îi are toată echipa.'],
+      ['claude.ai', 'Din contul claude.ai', 'Se activează din claude.ai, la Setări, Conectori.'],
+      ['plugin', 'Veniți cu un plugin', 'Instalați odată cu un plugin Claude Code.'],
+      ['doar pe acest calculator', 'Doar pe acest calculator', 'Adăugați doar pentru acest proiect, la tine.'],
+      ['toate proiectele tale', 'În toate proiectele tale', 'Adăugați la tine, pentru orice proiect.'],
+      ['folosit din aplicație', 'Folosiți din aplicație', 'Văzuți în lucru, dar fără o configurare găsită aici.']
+    ];
+    // Logo-uri: Simple Icons (CDN, versiune fixă), în culoarea mărcii; altfel inițiala.
+    const CONNECTOR_LOGOS = [
+      [/gmail/i, 'gmail', '#EA4335'], [/atlassian|jira|confluence|rovo/i, 'atlassian', '#0052CC'],
+      [/draw\.?io|diagrams/i, 'diagramsdotnet', '#F08705'], [/postman/i, 'postman', '#FF6C37'],
+      [/godaddy/i, 'godaddy', '#1BA3A3'], [/^aws|amazon|marketplace/i, 'amazonwebservices', '#232F3E'],
+      [/claude|anthropic/i, 'claude', '#D97757'], [/github/i, 'github', '#181717'], [/slack/i, 'slack', '#4A154B'],
+      [/notion/i, 'notion', '#000000'], [/drive/i, 'googledrive', '#4285F4'], [/calendar/i, 'googlecalendar', '#4285F4'],
+      [/sheets/i, 'googlesheets', '#34A853'], [/linear/i, 'linear', '#5E6AD2'], [/figma/i, 'figma', '#F24E1E'],
+      [/stripe/i, 'stripe', '#635BFF'], [/shopify/i, 'shopify', '#7AB55C'], [/woo/i, 'woocommerce', '#96588A'],
+      [/hubspot/i, 'hubspot', '#FF7A59'], [/whatsapp/i, 'whatsapp', '#25D366'], [/telegram/i, 'telegram', '#26A5E4'],
+      [/facebook|messenger/i, 'facebook', '#0866FF'], [/instagram/i, 'instagram', '#E4405F'], [/airtable/i, 'airtable', '#18BFFF'],
+      [/asana/i, 'asana', '#F06A6A'], [/trello/i, 'trello', '#0052CC'], [/zapier/i, 'zapier', '#FF4F00']
+    ];
+    const connectorLogoLoaded = {}, connectorLogoStyle = document.head.appendChild(document.createElement('style'));
+    function connectorLogoHtml(name) {
+      const letter = escapeHtml((name || '?').trim().charAt(0).toUpperCase());
+      const hit = CONNECTOR_LOGOS.find(([re]) => re.test(name || ''));
+      if (!hit) return `<div class="connector-logo">${letter}</div>`;
+      const [, slug, brand] = hit, url = `https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/${slug}.svg`;
+      if (!(slug in connectorLogoLoaded)) {
+        connectorLogoLoaded[slug] = false;
+        const img = new Image();
+        img.onload = () => {
+          connectorLogoLoaded[slug] = true;
+          connectorLogoStyle.textContent += `.connector-logo[data-slug="${slug}"]{background:#fff;color:transparent}.connector-logo[data-slug="${slug}"] i{display:block}`;
+        };
+        img.src = url;
+      }
+      return `<div class="connector-logo" data-slug="${slug}" style="--src:url('${url}');--brand:${brand}">${letter}<i></i></div>`;
+    }
+    function connectorAgo(t) {
+      const m = Math.round((Date.now() / 1000 - t) / 60);
+      if (m < 1) return 'acum';
+      if (m < 60) return `acum ${m} min`;
+      if (m < 1440) return `acum ${Math.floor(m / 60)} h`;
+      return `acum ${Math.floor(m / 1440)} zile`;
+    }
+    function renderConnectors() {
+      const el = document.getElementById('connectorsContent');
+      const data = window.AIOS_DATA;
+      const all = (data && data.connectors) || [];
+      if (!data) {
+        el.innerHTML = `<div class="projects-section"><h3 class="projects-section-title">Conectori</h3>
+          <p class="commands-intro">Lista se generează când pornești Claude Code în acest proiect. Deschide o sesiune, apoi revino aici.</p></div>`;
+        return;
+      }
+      let html = `<div class="projects-section"><h3 class="projects-section-title">Conectori</h3>
+        <p class="commands-intro">Tool-urile la care ajunge AI-ul în afara fișierelor: email, Jira, diagrame. Punctul verde înseamnă că a fost folosit în ultima zi. Ca să adaugi unul, scrie /process în Claude Code.</p>`;
+      if (!all.length) html += `<p class="commands-intro">Niciun conector găsit încă.</p>`;
+      html += `</div>`;
+      CONNECTOR_SOURCES.forEach(([key, title, help]) => {
+        const list = all.filter(c => c.source === key);
+        if (!list.length) return;
+        html += `<div class="projects-section"><h3 class="projects-section-title">${escapeHtml(title)} (${list.length})</h3>
+          <p class="connector-note">${escapeHtml(help)}</p><div class="memory-grid">` +
+          list.map(c => {
+            const used = c.last && Date.now() / 1000 - c.last < 86400;
+            const status = c.off ? 'Oprit' : c.last ? 'Folosit ultima dată ' + connectorAgo(c.last) : 'Nefolosit încă';
+            return `<div class="connector-card">${connectorLogoHtml(c.name)}<div>
+              <div class="connector-name">${escapeHtml(c.name)}</div>
+              <div class="connector-meta">${escapeHtml(c.kind)}${c.plugin ? ', din ' + escapeHtml(c.plugin) : ''}</div>
+              <div class="connector-status"><span class="connector-dot${c.off ? ' off' : used ? ' used' : ''}"></span>${escapeHtml(status)}</div>
+            </div></div>`;
+          }).join('') + `</div></div>`;
+      });
+      el.innerHTML = html;
+    }
+    let connectorsTimer = null;
+    function loadConnectors() {
+      const sc = document.createElement('script');
+      sc.src = 'explorer/live/data.js?t=' + Date.now();
+      sc.onload = sc.onerror = () => {
+        sc.remove();
+        renderConnectors();
+        clearTimeout(connectorsTimer);
+        if (activeMainTab === 'connectors') connectorsTimer = setTimeout(loadConnectors, 20000);
+      };
+      document.head.appendChild(sc);
+    }
 
     // Settings is now a dropdown trigger, not a direct tab switch.
     const settingsDropdownMenu = document.getElementById('settingsDropdownMenu');

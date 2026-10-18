@@ -21,7 +21,7 @@ Din răspunsuri generează `my-context/profile.md`, `my-context/TASKS.md` și, u
 | `CLAUDE.md` | ✅ | Doar regulile care se aplică mereu + check-ul de onboarding + tabelul „când citesc ce" (se încarcă la fiecare sesiune, deci ținut mic) |
 | `reference/` | ✅ | Detaliile din spatele regulilor (workflow task-uri, personal vs. echipă, skill-uri/playbook-uri, dashboard, compliance furnizori) — citite doar când subiectul apare |
 | `templates/` | ✅ | Șabloane pentru profil, oameni, proiecte, context, task-uri, skill-uri |
-| `.claude/skills/` | ✅ | Comenzile `/install`, `/planning`, `/process` și `/quiz` (legenda lor e în dashboard, pagina „Comenzi") |
+| `.claude/skills/` | ✅ | Comenzile `/install`, `/planning`, `/process`, `/recommend-process`, `/guide`, `/add-context`, `/sync`, `/history`, `/add-teammate`, `/update-template` și `/quiz` (legenda lor e în dashboard, pagina „Comenzi") |
 | `playbooks/` | ✅ | Rețete reutilizabile pentru cereri comune de automatizare de la clienți (ex. Instagram DM, WhatsApp, chatbot pe site) — cunoaștere generică, nu date personale |
 | `dashboard.html` | ✅ | Unealtă generică, read-only — citesc fișierele locale direct, fără server. Nicio modificare (task-uri, oameni, proiecte) nu se face din dashboard; toate vin din sesiunile de Claude Code |
 | `my-context/profile.md` | ❌ | Contextul tău personal/de business (Me/People/Terms/Projects/Preferences) |
@@ -32,7 +32,7 @@ Din răspunsuri generează `my-context/profile.md`, `my-context/TASKS.md` și, u
 | `my-context/assets/` (folderul) | ✅ | Zonă de drop pentru fișiere pe care vrei să lucrezi cu Claude (ex. excel-uri) — folderul există după clone, ca să ai unde pune fișiere |
 | `my-context/assets/*` (conținutul) | ❌ | Fișierele propriu-zise puse acolo — personale, nu se distribuie prin git |
 
-Fișierele marcate ❌ sunt în `.gitignore` în **repo-ul-șablon**: sunt specifice fiecărei firme și nu se distribuie prin el. În repo-ul unei firme, `/install` (pasul „Publicarea contextului") scoate `my-context/` din `.gitignore` (rămâne ignorat doar `assets/`), iar contextul se publică automat de către owner-i, pe un singur `main`; conflictele se rezolvă după `reference/sync-conflicts.md`.
+Fișierele marcate ❌ sunt ignorate în **repo-ul-șablon**, printr-un bloc marcat `AISPACE-TEMPLATE-ONLY` din `.gitignore`: sunt specifice fiecărei firme și nu se distribuie prin șablon. Într-un repo creat din șablon, `/install` (pasul „Publicarea contextului") rulează `scripts/firm-mode.sh`, care șterge acel bloc: de acum `my-context/` și `team/` se publică automat de către owner-i, pe un singur `main` (conflictele după `reference/sync-conflicts.md`). Rămân ignorate mereu `TASKS.md`, conținutul din `assets/`, `.env` și datele locale ale biroului 3D. Scriptul recunoaște repo-ul-șablon după adresa din `.claude/template-source` și refuză să ruleze acolo.
 
 ## Actualizare context
 

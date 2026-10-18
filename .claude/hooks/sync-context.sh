@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
+# Pe scurt: după fiecare răspuns, salvează și publică modificările contextului (doar la owner-i) și aduce ce au schimbat colegii.
 # Stop hook pentru repo-urile firmelor care folosesc AISpace (trunk-based, un singur main).
 # După fiecare tură, DOAR un owner (vezi „Poate face push" în fișa lui):
 #   1. comite my-context/ și .claude/skills/ (assets/ rămâne în afara git prin .gitignore),
 #   2. aduce ce a publicat altcineva (merge),
 #   3. publică. La conflict: oprește merge-ul și îi cere lui Claude să urmeze
 #      reference/sync-conflicts.md (userul alege când informațiile se contrazic).
-# Nu forțează niciodată push-ul. Inactiv în repo-ul-șablon (my-context/ e acolo în .gitignore).
+# Nu forțează niciodată push-ul. Inactiv în repo-ul-șablon: acolo my-context/ e ignorat de blocul AISPACE-TEMPLATE-ONLY
+# din .gitignore, pe care scripts/firm-mode.sh îl scoate la /install, în repo-urile firmelor.
 # Iese mereu cu 0.
 
 trap 'exit 0' EXIT

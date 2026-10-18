@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biroul AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  Biroul AI: sistemul firmei ca un birou 3D, plus fiecare sesiune Claude Code deschisă în proiect,
+  ca robot care merge acolo unde lucrează. Doar citește:
+    live/data.js  window.AIOS_DATA  (skill-uri, fișiere, echipă), scris de .claude/hooks/explorer-live.py
+    live/live.js  window.AIOS_LIVE  (sesiunile Claude), scris de același hook la fiecare pas
+  Ambele pot lipsi; pagina merge și fără ele. Fără fetch (nu merge pe file://): reinjectez <script>.
+-->
+<style>
+  :root {
+    --air: #E6ECEF; --ink: #1D2430; --ink-soft: #4F5866; --ink-muted: #7D8794;
+    --pine: #1F5C4F; --mint: #8FE3C3; --saffron: #F2B33D; --cherry: #D64550; --claude: #D97757;
+    --paper: rgba(252,253,252,.94); --line: rgba(29,36,48,.10);
+    --shadow: 0 1px 2px rgba(29,36,48,.06), 0 6px 16px rgba(29,36,48,.08), 0 18px 40px rgba(29,36,48,.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: "Schibsted Grotesk", system-ui, sans-serif; background: var(--air); color: var(--ink); overflow: hidden; font-size: 14px; line-height: 1.45; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  :focus-visible { outline: 3px solid var(--saffron); outline-offset: 2px; border-radius: 8px; }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; }
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+
+  .card { background: var(--paper); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 18px; box-shadow: var(--shadow); }
+
+  /* bara de sus */
+  #topbar { position: fixed; top: 14px; left: 14px; right: 14px; display: flex; gap: 10px; align-items: center; pointer-events: none; z-index: 5; }
+  #topbar > * { pointer-events: auto; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 16px; }
+  .mark { width: 34px; height: 34px; border-radius: 10px; background: var(--pine); display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .mark i { width: 6px; height: 9px; border-radius: 3px; background: var(--mint); box-shadow: 0 0 6px var(--mint); }
+  .brand b { display: block; font-weight: 700; font-size: 15px; }
+  .brand small { color: var(--ink-muted); font-size: 12px; }
+  .now-pill { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; font-weight: 500; }
+  .now-pill .dot { width: 9px; height: 9px; border-radius: 50%; background: #B9C2CB; }
+  .now-pill.on .dot { background: var(--pine); box-shadow: 0 0 0 4px rgba(31,92,79,.15); }
+  .todo-pill { display: none; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; font-weight: 500; }
+  .todo-pill.on { display: flex; }
+  .todo-pill .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--saffron); box-shadow: 0 0 0 4px rgba(242,179,61,.22); }
+  /* camera goală: rândul galben din eticheta ei */
+  .zone-todo { display: block; margin-top: 5px; padding: 3px 8px; border-radius: 7px; background: #FFF3D6; color: #6B4A07; font-size: 11.5px; font-weight: 500; }
+  .zone-todo code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
+  .rec { padding: 12px; border-radius: 12px; background: #FFF6E3; margin-bottom: 8px; }
+  .rec b { display: block; color: #4A3305; }
+  .rec p { color: #6B4A07; margin: 2px 0 0; font-size: 13px; }
+  .rec .copy { margin-top: 8px; }
+  .rec .link { margin-top: 6px; font-size: 12.5px; color: var(--pine); font-weight: 500; text-decoration: underline; }
+  .now-pill.wait .dot { background: var(--saffron); box-shadow: 0 0 0 4px rgba(242,179,61,.2); }
+
+  /* etichetele camerelor (CSS2D) */
+  .zone { pointer-events: auto; text-align: left; padding: 6px 11px 7px; border-radius: 12px; background: var(--paper); box-shadow: 0 1px 2px rgba(29,36,48,.08), 0 4px 12px rgba(29,36,48,.08); white-space: nowrap; }
+  /* fără transform/transition aici: CSS2DRenderer poziționează etichetele prin transform la fiecare cadru */
+  .zone:hover { box-shadow: 0 0 0 2px rgba(31,92,79,.35), 0 6px 16px rgba(29,36,48,.14); }
+  .zone b { display: block; font-weight: 600; font-size: 13px; }
+  .zone small { color: var(--ink-muted); font-size: 11px; }
+  .zone.out b::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--pine); margin-right: 6px; vertical-align: 1px; }
+  .zone.sel { outline: 2px solid var(--pine); }
+  .bot-tag { pointer-events: auto; padding: 4px 9px; border-radius: 10px; background: var(--paper); box-shadow: 0 2px 8px rgba(29,36,48,.12); font-size: 12px; white-space: nowrap; text-align: left; }
+  .bot-tag b { font-weight: 600; color: var(--claude); }
+  .bot-tag.waiting { background: #FFF6E3; }
+  .bot-tag.waiting b { color: #A66F0A; }
+  .desk-tag { font-size: 10.5px; color: var(--ink-soft); background: rgba(252,253,252,.8); padding: 1px 6px; border-radius: 6px; white-space: nowrap; pointer-events: auto; }
+  .desk-tag.own { background: #FCEFCF; }
+  /* conectori: eticheta cu logo, vizibilă și de departe */
+  .plug-tag { pointer-events: auto; display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--ink); background: var(--paper); padding: 3px 9px 3px 4px; border-radius: 999px; white-space: nowrap; box-shadow: 0 1px 4px rgba(29,36,48,.14); }
+  .plug-tag:hover { box-shadow: 0 0 0 2px rgba(31,92,79,.35), 0 2px 8px rgba(29,36,48,.14); }
+  .logo { position: relative; flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: #EEF1F3; color: var(--ink-soft); font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
+  .logo i { position: absolute; inset: 3px; -webkit-mask: var(--src) center / contain no-repeat; mask: var(--src) center / contain no-repeat; background: var(--brand); display: none; }
+  .item .logo { width: 22px; height: 22px; margin-right: 8px; }
+  .item .logo i { inset: 4px; }
+  .hook-tag { pointer-events: auto; display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--ink); background: var(--paper); padding: 3px 9px; border-radius: 8px; white-space: nowrap; box-shadow: 0 1px 4px rgba(29,36,48,.14); }
+  .hook-tag:hover { box-shadow: 0 0 0 2px rgba(31,92,79,.35), 0 2px 8px rgba(29,36,48,.14); }
+  .hook-tag.own { background: #FCEFCF; }
+  .item .file { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+  .person-tag { font-size: 11.5px; font-weight: 600; color: var(--ink); background: var(--paper); padding: 2px 8px; border-radius: 8px; white-space: nowrap; box-shadow: 0 1px 4px rgba(29,36,48,.12); }
+  /* văzut de departe: mai puțin text pe ecran. Numele skill-urilor și căile camerelor apar la apropiere sau la hover. */
+  #labels.far .skill-tag { display: none; }
+  #labels.far .zone small { display: none; }
+  #labels.far .zone:hover small, #labels.far .zone.sel small { display: block; }
+
+  /* panoul din dreapta */
+  #panel { position: fixed; top: 76px; right: 14px; bottom: 14px; width: 420px; display: none; flex-direction: column; z-index: 6; }
+  #panel.open { display: flex; }
+  .panel-head { padding: 18px 20px 12px; display: flex; gap: 12px; align-items: flex-start; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-size: 19px; font-weight: 700; line-height: 1.25; }
+  .panel-head .path { color: var(--ink-muted); font-size: 12.5px; margin-top: 2px; }
+  .close { margin-left: auto; width: 32px; height: 32px; border-radius: 10px; font-size: 18px; color: var(--ink-soft); flex-shrink: 0; }
+  .close:hover { background: rgba(29,36,48,.06); }
+  .panel-body { padding: 14px 20px 20px; overflow-y: auto; flex: 1; }
+  .panel-body p { color: var(--ink-soft); margin-bottom: 12px; }
+  .panel-body h3 { font-size: 13px; font-weight: 600; color: var(--ink-muted); margin: 16px 0 8px; }
+  .item { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 12px; background: rgba(29,36,48,.035); margin-bottom: 6px; }
+  button.item:hover { background: rgba(31,92,79,.09); }
+  .item b { display: block; font-weight: 600; }
+  .item small { display: block; color: var(--ink-muted); font-size: 12.5px; }
+  .item.own { background: #FBF0D6; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: rgba(31,92,79,.12); color: var(--pine); margin-left: 6px; vertical-align: 1px; }
+  .badge.wait { background: rgba(242,179,61,.22); color: #8A5B06; }
+  .badge.stop { background: rgba(214,69,80,.14); color: var(--cherry); }
+  .cmd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: #EEF2F0; border-radius: 8px; padding: 6px 9px; display: inline-block; }
+
+  /* notă jos */
+  #setupPill { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--saffron); color: #3A2A05; padding: 10px 18px; border-radius: 999px; font-weight: 500; box-shadow: var(--shadow); display: none; z-index: 5; }
+  /* comutatorul Explorează / Cum fac */
+  .seg { margin-left: auto; display: flex; padding: 4px; border-radius: 14px; gap: 2px; }
+  .seg button { padding: 8px 16px; border-radius: 10px; font-weight: 500; color: var(--ink-soft); }
+  .seg button[aria-selected="true"] { background: var(--pine); color: #fff; }
+  .seg button:not([aria-selected="true"]):hover { background: rgba(29,36,48,.06); }
+
+  /* lista de ghiduri, în stânga */
+  #guideList { position: fixed; top: 76px; left: 14px; bottom: 14px; width: 330px; display: none; flex-direction: column; z-index: 6; }
+  #guideList.open { display: flex; }
+  #guideList .panel-head { display: block; }
+  #guideSearch { width: 100%; margin-top: 10px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font: inherit; }
+  .guide-btn .who { float: right; }
+  .guide-btn[aria-current="true"] { background: rgba(31,92,79,.12); box-shadow: inset 3px 0 0 var(--pine); }
+
+  /* un ghid deschis */
+  .steps { list-style: none; counter-reset: step; margin: 8px 0 4px; }
+  .steps li { counter-increment: step; position: relative; padding: 10px 12px 10px 46px; border-radius: 12px; margin-bottom: 6px; background: rgba(29,36,48,.035); }
+  .steps li::before { content: counter(step); position: absolute; left: 12px; top: 10px; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 1.5px solid var(--pine); color: var(--pine); font-weight: 600; font-size: 12.5px; display: flex; align-items: center; justify-content: center; }
+  .steps li.room { cursor: pointer; }
+  .steps li.room:hover, .steps li.on { background: rgba(31,92,79,.09); }
+  .steps li.on::before { background: var(--pine); color: #fff; }
+  .steps .where { display: block; color: var(--ink-muted); font-size: 12px; margin-top: 3px; }
+  .copy { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+  .copy .cmd { flex: 1; white-space: pre-wrap; word-break: break-word; }
+  .copy button { padding: 6px 10px; border-radius: 8px; background: #fff; border: 1px solid var(--line); font-size: 12.5px; font-weight: 500; }
+  .copy button:hover { border-color: var(--pine); color: var(--pine); }
+  .note { padding: 10px 12px; border-radius: 12px; background: #FFF6E3; color: #6B4A07; margin-top: 12px; font-size: 13px; }
+  .guide-nav { display: flex; gap: 8px; margin-top: 16px; }
+  .guide-nav button { flex: 1; text-align: left; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+  .guide-nav button:hover { border-color: var(--pine); }
+  .guide-nav small { display: block; color: var(--ink-muted); font-size: 12px; }
+
+  /* scene: lista din stânga e #sceneList (stil comun cu #guideList), playerul jos la mijloc */
+  #sceneList { position: fixed; top: 76px; left: 14px; bottom: 14px; width: 330px; display: none; flex-direction: column; z-index: 6; }
+  #sceneList.open { display: flex; }
+  #sceneList .panel-head { display: block; }
+  .scene-btn[aria-current="true"] { background: rgba(31,92,79,.12); box-shadow: inset 3px 0 0 var(--pine); }
+  #player { position: fixed; bottom: 18px; left: calc(344px + (100% - 344px) / 2); transform: translateX(-50%); width: min(600px, calc(100% - 380px)); padding: 16px 18px 14px; display: none; z-index: 7; }
+  #player.open { display: block; }
+  .player-top { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .player-top b { font-weight: 600; }
+  .player-top small { color: var(--ink-muted); }
+  .player-top .close { margin-left: auto; width: 28px; height: 28px; font-size: 16px; }
+  #playerSay { font-size: 17px; line-height: 1.4; min-height: 48px; }
+  .player-bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .player-bar button.ctl { padding: 7px 13px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font-weight: 500; }
+  .player-bar button.ctl:hover:not(:disabled) { border-color: var(--pine); color: var(--pine); }
+  .player-bar button.ctl:disabled { opacity: .4; cursor: default; }
+  .player-bar button.main { background: var(--pine); border-color: var(--pine); color: #fff; min-width: 84px; }
+  .player-bar button.main:hover { color: #fff; filter: brightness(1.1); }
+  .dots { display: flex; gap: 6px; margin-left: auto; }
+  .dots button { width: 10px; height: 10px; border-radius: 50%; background: #CBD3DA; padding: 0; }
+  .dots button.done { background: #8FB3A8; }
+  .dots button.on { background: var(--saffron); transform: scale(1.25); }
+
+  #hint { position: fixed; left: 14px; bottom: 14px; padding: 12px 16px; max-width: 360px; color: var(--ink-soft); display: none; z-index: 5; }
+  #fallback { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 420px; padding: 20px 22px; display: none; z-index: 4; }
+  #fallback p { color: var(--ink-soft); margin-bottom: 12px; }
+  #fallback .rooms { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="labels"></div>
+
+<div id="topbar">
+  <div class="brand card">
+    <div class="mark" aria-hidden="true"><i></i><i></i></div>
+    <div><b id="brandName">Biroul tău AI</b><small id="brandSub">AISpace</small></div>
+  </div>
+  <button class="now-pill card" id="nowPill" aria-haspopup="dialog"><span class="dot"></span><span id="nowText">Niciun Claude deschis acum</span></button>
+  <button class="todo-pill card" id="todoPill" aria-haspopup="dialog"><span class="dot"></span><span id="todoText"></span></button>
+  <div class="seg card" role="tablist" aria-label="Mod">
+    <button role="tab" id="modeExplore" aria-selected="false">Explorează</button>
+    <button role="tab" id="modeGuides" aria-selected="true">Cum fac</button>
+    <button role="tab" id="modeScenes" aria-selected="false">Vezi cum merge</button>
+  </div>
+</div>
+
+<nav id="guideList" class="card" aria-labelledby="guideListTitle">
+  <div class="panel-head">
+    <h2 id="guideListTitle">Cum fac</h2>
+    <div class="path">Ghiduri pas cu pas. Apasă pe un pas ca să vezi unde se întâmplă.</div>
+    <input id="guideSearch" type="search" placeholder="Caută un ghid" aria-label="Caută un ghid">
+  </div>
+  <div class="panel-body" id="guideItems"></div>
+</nav>
+
+<nav id="sceneList" class="card" aria-labelledby="sceneListTitle">
+  <div class="panel-head">
+    <h2 id="sceneListTitle">Vezi cum merge</h2>
+    <div class="path">Scene scurte, animate în birou. Alege una și urmărește.</div>
+  </div>
+  <div class="panel-body" id="sceneItems"></div>
+</nav>
+
+<section id="player" class="card" aria-label="Scena" aria-live="polite">
+  <div class="player-top"><b id="playerTitle"></b><small id="playerStep"></small><button class="close" id="playerClose" aria-label="Oprește scena">×</button></div>
+  <div id="playerSay"></div>
+  <div class="player-bar">
+    <button class="ctl" id="playerPrev">Înapoi</button>
+    <button class="ctl main" id="playerPlay">Pauză</button>
+    <button class="ctl" id="playerNext">Înainte</button>
+    <div class="dots" id="playerDots"></div>
+  </div>
+</section>
+
+<aside id="panel" class="card" role="dialog" aria-labelledby="panelTitle">
+  <div class="panel-head">
+    <div><h2 id="panelTitle"></h2><div class="path" id="panelPath"></div></div>
+    <button class="close" id="panelClose" aria-label="Închide">×</button>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+</aside>
+
+<div id="setupPill">Încă nu e configurat. Scrie /install în Claude Code, apoi deschide din nou pagina.</div>
+<div id="hint" class="card">Trage ca să te uiți în jur, folosește rotița ca să apropii. Apasă pe o cameră ca să vezi ce e în ea.</div>
+<div id="fallback" class="card">
+  <p>Biroul 3D nu s-a putut încărca. Are nevoie de internet. Camerele și lista „Acum" merg în continuare.</p>
+  <div class="rooms" id="fallbackRooms"></div>
+</div>
+
+<script>
+// ================= UI simplu (merge și dacă 3D-ul nu se încarcă) =================
+(function () {
+  const BUILTIN = [
+    ['guide', 'toți', 'vrei să afli ce poți face aici'], ['install', 'toți', 'configurezi spațiul prima dată'],
+    ['planning', 'toți', 'adaugi task-uri'], ['process', 'toți', 'vrei să automatizezi ceva sau să faci un skill nou'], ['recommend-process', 'toți', 'vrei să afli ce merită automatizat'],
+    ['quiz', 'toți', 'vrei un quiz despre AI'], ['sync', 'toți', 'publici sau primești modificări'],
+    ['history', 'toți', 'vrei să vezi ce s-a schimbat'], ['add-context', 'owner', 'adaugi cunoștințe despre firmă'],
+    ['add-teammate', 'owner', 'vine un coleg nou'],
+    ['update-template', 'owner', 'aduci o versiune nouă a șablonului']
+  ].map(([name, who, when]) => ({ name, who, when, description: '', template: true }));
+
+  const ROOMS = {
+    library:  { title: 'Firma ta', path: 'ce știe AI-ul despre firmă' }, // titlul devine numele firmei, din date
+    workshop: { title: 'Foundation Skills', path: 'skill-urile venite cu AISpace' },
+    custom:   { title: 'Custom Skills', path: 'skill-urile create pentru firmă' },
+    inbox:    { title: 'Documente', path: 'my-context/assets/' },
+    safe:     { title: 'Seiful cu chei', path: '.env, în cunoștințele firmei' },
+    desk:     { title: 'Recepția', path: 'CLAUDE.md' },
+    team:     { title: 'Echipa', path: 'team/people/' },
+    gate:     { title: 'Verificarea de siguranță', path: 'rulează înainte de fiecare salvare' },
+    github:   { title: 'GitHub', path: 'copia voastră privată' },
+    template: { title: 'Șablonul AISpace', path: 'versiuni noi ale sistemului' },
+    connectors: { title: 'Conectori', path: 'tool-urile la care ajunge AI-ul' },
+    web:        { title: 'Internet', path: 'căutări și pagini web' }
+  };
+
+  // Ghidurile pas cu pas. Un pas: t = ce faci, cmd = ce scrii (cu buton de copiat), room = camera
+  // din birou unde se întâmplă (apăsat, camera se luminează). who: 'toți' sau 'owner'.
+  const GUIDES = [
+    { id: 'start', group: 'Începe aici', title: 'Prima zi: ce e aici', who: 'toți', room: 'desk',
+      intro: 'AISpace e locul în care AI-ul vostru știe cine sunteți, ce faceți și cum lucrați. Tu doar vorbești cu el, în română.',
+      steps: [
+        { t: 'Deschide Claude Code în folderul proiectului. Robotul tău intră pe ușa recepției.', room: 'desk' },
+        { t: 'Scrie comanda de mai jos. Îți spune pe scurt ce poți face, pe rolul tău.', cmd: '/guide' },
+        { t: 'Pune o întrebare normală, ca unui coleg. De exemplu, ce task-uri ai săptămâna asta.' },
+        { t: 'Uită-te în tab-ul Birou: vezi în ce cameră lucrează AI-ul acum.', room: 'workshop' }
+      ] },
+    { id: 'install', group: 'Începe aici', title: 'Configurează spațiul prima dată', who: 'toți', room: 'library',
+      intro: 'Durează cam 10 minute. AI-ul te întreabă cine ești, cu ce se ocupă firma și ce tool-uri folosiți.',
+      steps: [
+        { t: 'Scrie comanda de mai jos în Claude Code.', cmd: '/install' },
+        { t: 'Răspunde la întrebări, pe rând. Unde nu știi, poți sări.' },
+        { t: 'La final verifici ce a înțeles. Abia atunci scrie fișierele cu profilul tău și al firmei.', room: 'library' },
+        { t: 'Se deschide dashboard-ul. O singură dată, din Setări, alegi folderul proiectului.', room: 'desk' }
+      ],
+      note: 'Primul care rulează /install devine owner: poate publica modificări pentru toată echipa.' },
+    { id: 'task', group: 'Lucru de zi cu zi', title: 'Adaugă un task', who: 'toți', room: 'desk',
+      intro: 'Task-urile tale sunt doar ale tale. Nu ajung la colegi.',
+      steps: [
+        { t: 'Cel mai simplu: spune-i AI-ului ce ai de făcut și până când. De exemplu: „Adaugă un task: ofertă pentru magazinul X, până vineri".' },
+        { t: 'Pentru mai multe deodată, inclusiv cele care se repetă, folosește comanda de mai jos.', cmd: '/planning' },
+        { t: 'Task-ul apare în dashboard, în tab-ul Task-uri.', room: 'desk' },
+        { t: 'Întreabă-l dacă poate face el o parte din task. De multe ori poate.' }
+      ] },
+    { id: 'file', group: 'Lucru de zi cu zi', title: 'Dă-i AI-ului un fișier', who: 'toți', room: 'inbox',
+      intro: 'Un tabel, un PDF, o poză: le pui într-un singur loc și AI-ul le găsește.',
+      steps: [
+        { t: 'Copiază fișierul în folderul de mai jos, din proiect.', cmd: 'my-context/assets/', room: 'inbox' },
+        { t: 'Spune-i AI-ului ce să facă cu el. Dacă e singurul fișier, ajunge să spui „fișierul" sau „excel-ul".' },
+        { t: 'Fișierele de aici rămân pe calculatorul tău. Nu pleacă pe GitHub.', room: 'gate' }
+      ] },
+    { id: 'process', group: 'Lucru de zi cu zi', title: 'Automatizează ceva ce faci de mână', who: 'toți', room: 'custom',
+      intro: 'Povestești cum faci azi un lucru repetitiv. AI-ul propune cum îl preia și apoi chiar îl construiește.',
+      steps: [
+        { t: 'Scrie comanda și povestește procesul, ca unui coleg nou.', cmd: '/process' },
+        { t: 'AI-ul rezumă ce a înțeles. Confirmi sau corectezi.' },
+        { t: 'Îți propune unde se conectează: email, tabel, magazin online. Verifică și dacă tool-ul e sigur cu datele clienților.', room: 'connectors' },
+        { t: 'Dacă e nevoie de o cheie de acces, o pui în seif, nu în chat.', room: 'safe' },
+        { t: 'Îl testați împreună. Ce merge devine un skill pe care îl folosești oricând.', room: 'custom' }
+      ] },
+    { id: 'recommend', group: 'Lucru de zi cu zi', title: 'Află ce merită automatizat', who: 'toți', room: 'workshop',
+      intro: 'Nu știi de unde să începi? AI-ul se uită la ce știe despre firmă și îți spune unde se pierde cel mai mult timp.',
+      steps: [
+        { t: 'Scrie comanda de mai jos.', cmd: '/recommend-process' },
+        { t: 'Citește singur ce știe deja: firma, echipa, task-urile care se repetă, tool-urile.', room: 'library' },
+        { t: 'Te întreabă cel mult 3 lucruri, doar ce lipsește.' },
+        { t: 'Îți arată top 3 idei, cu timpul economisit, efortul și riscul pentru datele clienților.' },
+        { t: 'Alegi una și o construiește /process, ca skill al firmei.', room: 'custom' }
+      ],
+      note: 'Ține minte ce ai refuzat și de ce, ca să nu-ți propună același lucru de două ori.' },
+    { id: 'key', group: 'Lucru de zi cu zi', title: 'Pune o cheie de acces în seif', who: 'toți', room: 'safe',
+      intro: 'Cheile și parolele pentru tool-uri stau într-un singur fișier, doar pe calculatorul tău.',
+      steps: [
+        { t: 'Cere-i AI-ului să pregătească locul pentru cheie. Îți dă un link către fișier.', room: 'safe' },
+        { t: 'Deschide fișierul și lipește cheia după semnul egal. Salvează.', cmd: '.env' },
+        { t: 'Gata. Scripturile o citesc singure de acolo.' }
+      ],
+      note: 'Nu lipi niciodată o cheie în chat. Dacă ai făcut-o deja, schimb-o din contul tool-ului.' },
+    { id: 'history', group: 'Lucru de zi cu zi', title: 'Vezi ce s-a schimbat', who: 'toți', room: 'github',
+      intro: 'Fiecare salvare are o notă: ce s-a schimbat, când, cine și de ce.',
+      steps: [
+        { t: 'Scrie comanda sau întreabă direct: „Cine a schimbat prețurile săptămâna trecută?"', cmd: '/history' },
+        { t: 'Primești răspunsul în cuvinte simple, nu cod.', room: 'github' },
+        { t: 'Vrei înapoi o versiune veche? Doar un owner o poate readuce, ca o modificare nouă.' }
+      ] },
+    { id: 'sync', group: 'Lucru de zi cu zi', title: 'Primește ce au schimbat colegii', who: 'toți', room: 'github',
+      intro: 'La owner-i, salvarea și publicarea se fac singure după fiecare răspuns al AI-ului. Comanda e pentru când vrei acum.',
+      steps: [
+        { t: 'Scrie comanda de mai jos.', cmd: '/sync' },
+        { t: 'Primești ultimele modificări de pe GitHub.', room: 'github' },
+        { t: 'Dacă ești owner, înainte de publicare se verifică să nu plece chei sau date personale.', room: 'gate' },
+        { t: 'Dacă doi oameni au schimbat același lucru diferit, alegi tu ce rămâne.' }
+      ] },
+    { id: 'context', group: 'Pentru owner', title: 'Învață AI-ul ceva nou despre firmă', who: 'owner', room: 'library',
+      intro: 'Un link, un document sau ce știe alt AI despre voi devin cunoștințe pe care le folosește toată echipa.',
+      steps: [
+        { t: 'Scrie comanda și spune de unde vin informațiile.', cmd: '/add-context' },
+        { t: 'Pentru documente, pune-le întâi aici.', cmd: 'my-context/assets/', room: 'inbox' },
+        { t: 'AI-ul îți arată ce intră și unde, înainte să scrie. Datele personale rămân afară.', room: 'library' },
+        { t: 'Confirmi, iar cunoștințele se publică pentru echipă.', room: 'github' }
+      ] },
+    { id: 'skill', group: 'Pentru owner', title: 'Fă un skill nou', who: 'owner', room: 'custom',
+      intro: 'Un skill e un mod de lucru pe care AI-ul îl știe pe de rost, de exemplu „cum răspundem la o reclamație".',
+      steps: [
+        { t: 'Scrie comanda și spune că știi deja ce skill vrei. Descrie ce trebuie să facă.', cmd: '/process' },
+        { t: 'AI-ul verifică să nu existe deja unul la fel, nici printre Foundation Skills.', room: 'workshop' },
+        { t: 'Îți spune de ce are nevoie: conectori, chei, fișiere.' },
+        { t: 'Îl testați împreună. Apoi apare în camera Custom Skills, pe podeaua aurie.', room: 'custom' }
+      ] },
+    { id: 'teammate', group: 'Pentru owner', title: 'Adaugă un coleg', who: 'owner', room: 'team',
+      intro: 'Colegul primește acces la contextul firmei și un mesaj de bun venit, gata de trimis.',
+      steps: [
+        { t: 'Scrie comanda de mai jos.', cmd: '/add-teammate' },
+        { t: 'Spui numele, rolul, emailul și proiectele lui.', room: 'team' },
+        { t: 'Alegi dacă poate publica modificări sau doar citește. Implicit doar citește.' },
+        { t: 'După confirmarea ta, primește invitația pe GitHub.', room: 'github' },
+        { t: 'Îi trimiți tu mesajul de bun venit. AI-ul nu trimite nimic în numele tău.' }
+      ],
+      note: 'Când pleacă cineva, aceeași comandă îi scoate accesul.' },
+    { id: 'connect', group: 'Lucru de zi cu zi', title: 'Conectează un tool nou', who: 'toți', room: 'connectors',
+      intro: 'Un conector îi dă AI-ului acces la un tool: emailul, Jira, magazinul online. Așa poate face treabă, nu doar să-ți spună ce să faci.',
+      steps: [
+        { t: 'Scrie comanda și spune ce tool vrei să folosești și pentru ce.', cmd: '/process' },
+        { t: 'AI-ul caută conectorul potrivit și verifică dacă e sigur cu datele clienților.', room: 'connectors' },
+        { t: 'Conectorii din claude.ai îi activezi tu, din claude.ai, la Setări, Conectori. AI-ul nu se loghează în numele tău.' },
+        { t: 'Dacă tool-ul cere o cheie de acces, o pui în seif.', room: 'safe' },
+        { t: 'Conectorul apare aici ca un stâlp nou. Becul lui se aprinde când e folosit.', room: 'connectors' }
+      ] },
+    { id: 'update', group: 'Pentru owner', title: 'Adu o versiune nouă a AISpace', who: 'owner', room: 'template',
+      intro: 'Îmbunătățirile șablonului ajung la voi fără să atingă ce ați modificat voi.',
+      steps: [
+        { t: 'Scrie comanda de mai jos.', cmd: '/update-template' },
+        { t: 'Versiunea nouă se descarcă separat, nu direct peste proiect.', room: 'template' },
+        { t: 'Fișierele pe care nu le-ați schimbat se înlocuiesc. Pentru celelalte vezi ambele variante și alegi.' },
+        { t: 'Pentru scripturile care pornesc singure se cere un Da separat.', room: 'desk' }
+      ] }
+  ];
+
+  // Scenele animate. Fiecare pas: say = ce scrie pe ecran, room = camera spre care se uită,
+  // do = acțiunile din 3D, rulate pe rând. Acțiuni: spawn (actor, punct, 'bot'|'pawn'), walk (actor, punct),
+  // note (nume, loc, text), pick (nume, actor), drop/fly (nume, loc), hide (nume), gate ('scan'|'stop'|'ok'|null).
+  // Punctele și locurile sunt definite în partea 3D (SCENE_POINTS, NOTE_SPOTS).
+  const SCENES = [
+    { id: 'question', title: 'Pui o întrebare', intro: 'Ce face Claude din clipa în care întrebi ceva până primești răspunsul.',
+      beats: [
+        { say: 'Deschizi Claude Code și întrebi: „Cât costă un coș de legume?"', room: 'desk', do: [['spawn', 'claude', 'entrance'], ['walk', 'claude', 'desk']] },
+        { say: 'Întâi citește regulile de la recepție. Le citește la începutul fiecărei sesiuni.', room: 'desk', do: [['note', 'rules', 'counter', 'CLAUDE.md'], ['pick', 'rules', 'claude']] },
+        { say: 'Apoi merge la raftul potrivit. Prețurile stau în cunoștințele firmei.', room: 'library', do: [['hide', 'rules'], ['walk', 'claude', 'shelf']] },
+        { say: 'Ia de acolo doar ce îi trebuie.', room: 'library', do: [['note', 'answer', 'shelf', 'prețuri'], ['pick', 'answer', 'claude']] },
+        { say: 'Se întoarce și îți răspunde pe înțelesul tău.', room: 'desk', do: [['walk', 'claude', 'desk'], ['fly', 'answer', 'viewer'], ['hide', 'answer']] },
+        { say: 'N-a schimbat niciun fișier, deci nu e nimic de salvat.', room: 'desk', do: [] }
+      ] },
+    { id: 'skill', title: 'Folosești un skill', intro: 'Cum un mod de lucru scris o dată se repetă la fel de fiecare dată.',
+      beats: [
+        { say: 'Scrii /process și povestești cum trimiți facturile de mână.', room: 'desk', do: [['spawn', 'claude', 'desk']] },
+        { say: 'Claude merge la biroul skill-ului /process. Acolo e scris, pas cu pas, cum se lucrează.', room: 'workshop', do: [['walk', 'claude', 'skill:process']] },
+        { say: 'Urmează pașii: rezumă ce a înțeles și te întreabă doar ce lipsește.', room: 'workshop', do: [['note', 'plan', 'skill:process', 'plan'], ['pick', 'plan', 'claude']] },
+        { say: 'Construiește automatizarea ca skill al firmei, în camera Custom Skills.', room: 'custom', do: [['walk', 'claude', 'ownFloor'], ['drop', 'plan', 'ownFloor']] },
+        { say: 'Cheia de acces pentru tool o pui tu în seif, nu în chat.', room: 'safe', do: [['note', 'key', 'viewer', 'cheie'], ['fly', 'key', 'safe'], ['hide', 'key']] },
+        { say: 'De acum îl pornești oricând cu /facturi. Merge la fel de fiecare dată.', room: 'custom', do: [['hide', 'plan'], ['note', 'newskill', 'ownFloor', '/facturi']] }
+      ] },
+    { id: 'document', title: 'Aduci un document nou', intro: 'Drumul unui fișier din Documente până pe raft și apoi la colegi.',
+      beats: [
+        { say: 'Pui lista de prețuri în Documente.', room: 'inbox', do: [['note', 'doc', 'outsideInbox', 'preturi.xlsx'], ['fly', 'doc', 'inbox']] },
+        { say: 'Scrii /add-context. Claude ia documentul.', room: 'inbox', do: [['spawn', 'claude', 'desk'], ['walk', 'claude', 'inbox'], ['pick', 'doc', 'claude']] },
+        { say: 'Îți arată ce intră și unde, înainte să scrie ceva.', room: 'library', do: [['walk', 'claude', 'middle']] },
+        { say: 'Pune informația pe raftul potrivit. Datele personale rămân afară.', room: 'library', do: [['walk', 'claude', 'shelf'], ['drop', 'doc', 'shelf']] },
+        { say: 'La salvare, totul trece întâi prin verificarea de siguranță.', room: 'gate', do: [['note', 'save', 'shelf', 'salvare'], ['pick', 'save', 'claude'], ['walk', 'claude', 'gate'], ['gate', 'scan']] },
+        { say: 'Totul e în regulă, așa că se publică. Colegii primesc lista nouă.', room: 'github', do: [['gate', 'ok'], ['fly', 'save', 'github']] }
+      ] },
+    { id: 'leak', title: 'O cheie scăpată la salvare', intro: 'Ce se întâmplă dacă o parolă ajunge, din greșeală, într-un fișier.',
+      beats: [
+        { say: 'Claude lucrează la un script. Din greșeală, cheia de acces ajunge într-un fișier.', room: 'custom', do: [['spawn', 'claude', 'ownFloor'], ['note', 'key', 'ownFloor', 'cheie'], ['pick', 'key', 'claude']] },
+        { say: 'La salvare, verificarea de siguranță se uită la tot ce pleacă.', room: 'gate', do: [['walk', 'claude', 'gate'], ['gate', 'scan']] },
+        { say: 'Găsește cheia și oprește salvarea. Nimic nu pleacă pe GitHub.', room: 'gate', do: [['gate', 'stop']] },
+        { say: 'Cheia se mută în seif, care rămâne doar pe calculatorul tău.', room: 'safe', do: [['walk', 'claude', 'safe'], ['drop', 'key', 'safe'], ['hide', 'key']] },
+        { say: 'A doua încercare, fără cheie, trece.', room: 'github', do: [['gate', 'ok'], ['note', 'save', 'gate', 'salvare'], ['fly', 'save', 'github']] }
+      ] },
+    { id: 'teammate', title: 'Un coleg primește modificările', intro: 'Cum ajunge la colegi ce ai schimbat tu.',
+      beats: [
+        { say: 'Ai salvat o modificare. E acum pe GitHub, în copia voastră privată.', room: 'github', do: [['note', 'change', 'github', 'prețuri noi']] },
+        { say: 'Colegul tău deschide Claude Code și scrie /sync.', room: 'team', do: [['spawn', 'coleg', 'team', 'pawn']] },
+        { say: 'Modificarea vine la el. De acum, AI-ul lui știe și el prețurile noi.', room: 'team', do: [['fly', 'change', 'team']] },
+        { say: 'Dacă ați schimbat amândoi același lucru diferit, el alege ce rămâne.', room: 'team', do: [] }
+      ] },
+    { id: 'update', title: 'Vine o versiune nouă AISpace', intro: 'Cum se actualizează sistemul fără să atingă ce e al vostru.',
+      beats: [
+        { say: 'Șablonul AISpace are o versiune nouă.', room: 'template', do: [['note', 'v', 'template', 'versiune nouă']] },
+        { say: 'Scrii /update-template. Versiunea nouă intră pe ușa din spate.', room: 'workshop', do: [['fly', 'v', 'backdoor']] },
+        { say: 'Foundation Skills, venite cu AISpace, se actualizează. Cele schimbate de voi le vezi întâi și alegi.', room: 'workshop', do: [['fly', 'v', 'workshop'], ['hide', 'v']] },
+        { say: 'Custom Skills, create pentru firmă, rămân neatinse. La fel cunoștințele și echipa.', room: 'custom', do: [] }
+      ] }
+  ];
+
+  // Logo-uri de conectori: Simple Icons (CDN jsDelivr, versiune fixă), colorate în culoarea mărcii.
+  // Dacă nu se încarcă (fără internet sau marcă necunoscută), rămâne inițiala.
+  const LOGOS = [
+    [/gmail/i, 'gmail', '#EA4335'], [/atlassian|jira|confluence|rovo/i, 'atlassian', '#0052CC'],
+    [/draw\.?io|diagrams/i, 'diagramsdotnet', '#F08705'], [/postman/i, 'postman', '#FF6C37'],
+    [/godaddy/i, 'godaddy', '#1BA3A3'], [/^aws|amazon|marketplace/i, 'amazonwebservices', '#232F3E'],
+    [/claude|anthropic/i, 'claude', '#D97757'], [/github/i, 'github', '#181717'], [/slack/i, 'slack', '#4A154B'],
+    [/notion/i, 'notion', '#000000'], [/drive/i, 'googledrive', '#4285F4'], [/calendar/i, 'googlecalendar', '#4285F4'],
+    [/sheets/i, 'googlesheets', '#34A853'], [/linear/i, 'linear', '#5E6AD2'], [/figma/i, 'figma', '#F24E1E'],
+    [/stripe/i, 'stripe', '#635BFF'], [/shopify/i, 'shopify', '#7AB55C'], [/woo/i, 'woocommerce', '#96588A'],
+    [/hubspot/i, 'hubspot', '#FF7A59'], [/whatsapp/i, 'whatsapp', '#25D366'], [/telegram/i, 'telegram', '#26A5E4'],
+    [/facebook|messenger/i, 'facebook', '#0866FF'], [/instagram/i, 'instagram', '#E4405F'], [/airtable/i, 'airtable', '#18BFFF'],
+    [/asana/i, 'asana', '#F06A6A'], [/trello/i, 'trello', '#0052CC'], [/zapier/i, 'zapier', '#FF4F00']
+  ];
+  // Un logo încărcat primește o regulă CSS: se aplică și etichetelor create mai târziu.
+  const logoOk = {}, logoStyle = document.head.appendChild(document.createElement('style'));
+  function logoHtml(name) {
+    const hit = LOGOS.find(([re]) => re.test(name || ''));
+    const letter = esc((name || '?').trim().charAt(0).toUpperCase());
+    if (!hit) return `<span class="logo" aria-hidden="true">${letter}</span>`;
+    const [, slug, brand] = hit, url = `https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/${slug}.svg`;
+    if (!(slug in logoOk)) {
+      logoOk[slug] = false;
+      const img = new Image();
+      img.onload = () => {
+        logoOk[slug] = true;
+        logoStyle.textContent += `.logo[data-slug="${slug}"]{background:#fff;color:transparent;box-shadow:inset 0 0 0 1px var(--line)}.logo[data-slug="${slug}"] i{display:block}`;
+      };
+      img.src = url;
+    }
+    return `<span class="logo" data-slug="${slug}" aria-hidden="true" style="--src:url('${url}');--brand:${brand}">${letter}<i></i></span>`;
+  }
+
+  const UI = window.AIOS_UI = {
+    ROOMS, GUIDES, SCENES, logoHtml, data: null, live: { sessions: [] },
+    listeners: { data: [], live: [], select: [], focus: [], mode: [], beat: [] },
+    on(ev, fn) { this.listeners[ev].push(fn); },
+    emit(ev, arg) { this.listeners[ev].forEach(fn => { try { fn(arg); } catch (e) { console.error(e); } }); }
+  };
+
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const $ = id => document.getElementById(id);
+
+  function normalizeData(d) {
+    d = d || {};
+    return {
+      setUp: d.setUp ?? false, company: d.company || {}, inboxCount: d.inboxCount || 0, hasEnv: !!d.hasEnv,
+      repoUrl: d.repoUrl || '', viewer: d.viewer || null, context: d.context || [],
+      skills: (d.skills && d.skills.length) ? d.skills : BUILTIN, team: d.team || [],
+      connectors: d.connectors || [], hooks: d.hooks || [], recent: d.recent || [], work: d.work || { unsaved: [], unsavedCount: 0 },
+      generated: d.generated || ''
+    };
+  }
+
+  // ---------- reîncărcarea fișierelor de date (script tag cu cache-buster) ----------
+  function load(src, done) {
+    const s = document.createElement('script');
+    s.src = src + '?t=' + Date.now();
+    s.onload = () => { s.remove(); done(true); };
+    s.onerror = () => { s.remove(); done(false); };
+    document.head.appendChild(s);
+  }
+  let dataSig = '';
+  function pollData() {
+    load('live/data.js', () => {
+      const sig = JSON.stringify(window.AIOS_DATA || null);
+      if (sig !== dataSig || !UI.data) { dataSig = sig; UI.data = normalizeData(window.AIOS_DATA); renderChrome(); UI.emit('data', UI.data); }
+      setTimeout(pollData, 20000);
+    });
+  }
+  let liveFails = 0, liveSig = '';
+  function pollLive() {
+    load('live/live.js', ok => {
+      liveFails = ok ? 0 : liveFails + 1;
+      const all = ((window.AIOS_LIVE || {}).sessions || []);
+      const now = Date.now() / 1000;
+      // Doar Claude, deocamdată. Sesiunile tăcute de peste 3 ore le consider închise.
+      const sessions = all.filter(s => (s.app || 'claude') === 'claude' && now - (s.last || 0) < 3 * 3600);
+      const sig = JSON.stringify(sessions);
+      if (sig !== liveSig) { liveSig = sig; UI.live = { sessions }; renderNow(); UI.emit('live', UI.live); }
+      setTimeout(pollLive, liveFails > 3 ? 15000 : 1500);
+    });
+  }
+
+  // ---------- bara de sus ----------
+  // Ce lipsește și ce skill completează: o cameră goală primește un semn în birou, un bloc în panoul ei
+  // și apare în pastila „De completat".
+  function recommendations(d) {
+    const out = [];
+    if (!d.setUp) out.push({ room: 'library', title: 'Spune-i AI-ului cine sunteți', why: 'Încă nu știe nimic despre firmă: ce vindeți, cine e în echipă, cum lucrați.', cmd: '/install', guide: 'install' });
+    else if (!d.context.length) out.push({ room: 'library', title: 'Adaugă cunoștințe despre firmă', why: 'Rafturile sunt goale. Adu informații din linkuri, documente sau ce știe alt AI despre voi.', cmd: '/add-context', guide: 'context' });
+    if (!d.team.length) out.push({ room: 'team', title: 'Adaugă oamenii din echipă', why: 'Nu e nimeni în echipă. Fiecare coleg primește acces și un mesaj de bun venit.', cmd: '/add-teammate', guide: 'teammate' });
+    if (!d.skills.some(s => !s.template)) out.push({ room: 'custom', title: 'Fă primul skill al firmei', why: 'Camera Custom Skills e goală. Povestește un proces pe care îl faci de mână sau spune direct ce skill vrei.', cmd: '/process', guide: 'process' });
+    return out;
+  }
+  function recHtml(r) {
+    return `<div class="rec"><b>${esc(r.title)}</b><p>${esc(r.why)}</p>
+      <div class="copy"><span class="cmd">${esc(r.cmd)}</span><button data-copy="${esc(r.cmd)}" aria-label="Copiază ${esc(r.cmd)}">Copiază</button></div>
+      <button class="link" data-guide="${r.guide}">Vezi ghidul pas cu pas</button></div>`;
+  }
+  UI.recommendations = () => recommendations(UI.data);
+
+  function renderChrome() {
+    const d = UI.data;
+    $('brandName').textContent = d.company.name || 'Biroul tău AI';
+    ROOMS.library.title = d.company.name || 'Firma ta';
+    $('brandSub').textContent = 'AISpace' + (d.generated ? ', actualizat la ' + d.generated.slice(11) : '');
+    $('setupPill').style.display = d.setUp ? 'none' : 'block';
+    const recs = recommendations(d);
+    $('todoPill').classList.toggle('on', recs.length > 0);
+    $('todoText').textContent = recs.length === 1 ? 'Un lucru de completat' : `${recs.length} lucruri de completat`;
+    if (panelState) openPanel(panelState.kind, panelState.id, { keep: true });
+  }
+  function stateWord(s) {
+    return { arriving: 'tocmai a intrat', thinking: 'se gândește', working: 'lucrează', waiting: 'te așteaptă' }[s.state] || 'lucrează';
+  }
+  function renderNow() {
+    const ss = UI.live.sessions, pill = $('nowPill');
+    const waiting = ss.filter(s => s.state === 'waiting').length;
+    pill.classList.toggle('on', ss.length > 0 && waiting < ss.length);
+    pill.classList.toggle('wait', ss.length > 0 && waiting === ss.length);
+    $('nowText').textContent = !ss.length ? 'Niciun Claude deschis acum'
+      : ss.length === 1 ? 'Acum: Claude ' + stateWord(ss[0])
+      : `Acum: ${ss.length} sesiuni Claude` + (waiting ? `, ${waiting} te așteaptă` : '');
+    if (panelState && (panelState.kind === 'now' || panelState.kind === 'session')) openPanel(panelState.kind, panelState.id, { keep: true });
+  }
+
+  // ---------- panoul din dreapta ----------
+  let panelState = null;
+  function ago(t) {
+    const m = Math.round((Date.now() / 1000 - t) / 60);
+    return m < 1 ? 'acum' : m < 60 ? `acum ${m} min` : `acum ${Math.floor(m / 60)} h ${m % 60} min`;
+  }
+  function sessionItem(s) {
+    const badge = s.state === 'waiting' ? '<span class="badge wait">te așteaptă</span>' : `<span class="badge">${esc(stateWord(s))}</span>`;
+    return `<button class="item" data-session="${esc(s.id)}"><b>${esc(s.label || 'Lucrează')}${badge}</b>
+      <small>${esc(s.person || 'Claude')} în ${esc((ROOMS[s.room] || ROOMS.desk).title)}, ultima mișcare ${ago(s.last)}</small></button>`;
+  }
+  // Hook-urile: reguli care pornesc singure. Foundation = venite cu AISpace; Custom = ale firmei sau doar pe acest calculator.
+  const cap = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+  function hookItem(h) {
+    return `<div class="item${h.template ? '' : ' own'}"><b>${esc(h.name)}${h.personal ? '<span class="badge">doar la tine</span>' : ''}</b>
+      ${h.summary ? `<small>${esc(cap(h.summary))}</small>` : ''}<small>Pornește ${esc(h.when.join(', '))}.</small>${h.file ? `<small class="file">${esc(h.file)}</small>` : ''}</div>`;
+  }
+  function hooksFor(room, d) { return d.hooks.filter(h => room === 'workshop' ? h.template : !h.template); }
+  function hooksSection(room, d) {
+    const list = hooksFor(room, d);
+    return `<h3>Sertarele de hooks</h3>` + (list.length ? list.map(hookItem).join('')
+      : `<p>Încă niciun hook ${room === 'custom' ? 'al firmei' : ''}. Dacă o automatizare are nevoie de unul, /process îl face.</p>`);
+  }
+
+  function skillItem(s) {
+    return `<button class="item${s.template ? '' : ' own'}" data-skill="${esc(s.name)}"><b>/${esc(s.name)}${s.who === 'owner' ? '<span class="badge">doar owner</span>' : ''}</b>
+      <small>${esc(s.description || s.when || '')}</small></button>`;
+  }
+  function roomBody(id) {
+    const d = UI.data, here = UI.live.sessions.filter(s => s.room === id);
+    let h = recommendations(d).filter(r => r.room === id).map(recHtml).join('');
+    if (id === 'library') {
+      h += `<p>Tot ce știe AI-ul despre firmă: ce vindeți, proiectele, oamenii. Fiecare raft e un fișier. Tot aici sunt Documentele (fișierele tale de lucru), echipa și seiful cu chei.</p><h3>Rafturile</h3>`;
+      h += d.context.length ? d.context.map(c => `<div class="item"><b>${esc(c.title)}</b><small>${esc(c.file)}, ${c.lines} rânduri</small><small>${esc(c.summary)}</small></div>`).join('')
+        : '<p>Încă nu e nimic aici.</p>';
+    } else if (id === 'workshop') {
+      h += `<p>Skill-urile de bază, venite cu AISpace. Le are orice firmă și se actualizează cu /update-template. Fiecare birou e un skill: apasă pe unul ca să vezi când îl folosești.</p>`;
+      h += d.skills.filter(s => s.template).map(skillItem).join('');
+      h += hooksSection('workshop', d);
+    } else if (id === 'custom') {
+      const own = d.skills.filter(s => !s.template);
+      h += `<p>Skill-urile create pentru firma voastră: felul vostru de a lucra și automatizările voastre, scrise o dată și folosite de fiecare dată. Actualizările AISpace nu le ating.</p>`;
+      h += own.length ? own.map(skillItem).join('') : '<p>Încă niciunul.</p>';
+      h += hooksSection('custom', d);
+    } else if (id === 'inbox') {
+      h += `<p>Locul în care pui fișierele la care vrei să lucreze AI-ul: tabele, documente, poze. Nu pleacă niciodată pe GitHub.</p>`;
+      h += `<div class="item"><b>${d.inboxCount ? d.inboxCount + (d.inboxCount === 1 ? ' fișier așteaptă' : ' fișiere așteaptă') : 'Nimic de procesat'}</b><small>my-context/assets/</small></div>`;
+    } else if (id === 'safe') {
+      h += `<p>Cheile și parolele pentru conectori stau doar aici, pe calculatorul tău. Nu ajung niciodată în git sau în chat.</p>`;
+      h += `<div class="item"><b>${d.hasEnv ? 'Seiful există' : 'Seiful nu e creat încă'}</b><small>${d.hasEnv ? 'Fișierul .env e pe calculatorul tău.' : 'Se creează din .env.example când ai nevoie de prima cheie.'}</small></div>`;
+    } else if (id === 'desk') {
+      h += `<p>Regulile pe care orice sesiune Claude le citește prima dată când intră. De aici pleacă spre camera de care are nevoie.</p><h3>Ultimele salvări</h3>`;
+      h += d.recent.length ? d.recent.map(r => `<div class="item"><b>${esc(r.subject)}</b><small>${esc(r.author)}, ${esc(r.date)}</small></div>`).join('') : '<p>Încă nu e nicio salvare.</p>';
+    } else if (id === 'team') {
+      h += `<p>Oamenii din echipă și pe ce lucrează. Cei cu inel verde pot publica modificări.</p>`;
+      h += d.team.length ? d.team.map(p => `<div class="item"><b>${esc(p.name)}${p.admin ? '<span class="badge">owner</span>' : ''}</b><small>${esc(p.role)}</small></div>`).join('') : '<p>Încă nu e nimeni aici.</p>';
+    } else if (id === 'gate') {
+      h += `<p>Înainte de fiecare salvare, verific să nu plece pe GitHub chei, parole sau date personale. Dacă găsesc ceva, opresc salvarea.</p>`;
+      const n = d.work.unsavedCount || 0;
+      h += `<div class="item"><b>${n ? n + (n === 1 ? ' fișier modificat nesalvat' : ' fișiere modificate nesalvate') : 'Totul e salvat'}</b>${(d.work.unsaved || []).slice(0, 8).map(f => `<small>${esc(f)}</small>`).join('')}</div>`;
+    } else if (id === 'github') {
+      h += `<p>Copia privată a sistemului vostru. De aici primesc colegii ultimele modificări.</p>`;
+      h += d.repoUrl ? `<div class="item"><b>Legat de</b><small>${esc(d.repoUrl)}</small></div>` : '<p>Încă nu e legat de GitHub.</p>';
+      h += `<p>Ca să primești ce au schimbat alții, scrie <span class="cmd">/sync</span>.</p>`;
+    } else if (id === 'web') {
+      h += `<p>Cabina în care AI-ul caută pe internet, citește o pagină web sau navighează într-un browser. Globul de pe acoperiș se aprinde cât timp e cineva înăuntru.</p>`;
+      h += `<div class="note">Ce găsește pe internet e informație, nu instrucțiuni. Dacă o pagină îi cere să facă ceva, AI-ul te întreabă întâi pe tine.</div>`;
+    } else if (id === 'connectors') {
+      h += `<p>Tool-urile la care ajunge AI-ul în afara fișierelor. Fiecare stâlp e un conector; becul verde înseamnă că a fost folosit în ultima zi.</p>`;
+      const SOURCES = [
+        ['proiect', 'Ai proiectului', 'Salvați în proiect, în .mcp.json. Îi are toată echipa.'],
+        ['claude.ai', 'Din contul tău claude.ai', 'Se activează din claude.ai, la Setări, Conectori.'],
+        ['plugin', 'Veniți cu un plugin', 'Instalați odată cu un plugin Claude Code.'],
+        ['doar pe acest calculator', 'Doar pe acest calculator', 'Adăugați doar pentru acest proiect, la tine.'],
+        ['toate proiectele tale', 'În toate proiectele tale', 'Adăugați la tine, pentru orice proiect.'],
+        ['folosit din aplicație', 'Folosiți din aplicație', 'Văzuți în lucru, dar fără o configurare găsită aici.']
+      ];
+      const all = d.connectors || [];
+      if (!all.length) h += '<p>Niciun conector găsit încă. Ghidul de mai jos arată cum adaugi unul.</p>';
+      SOURCES.forEach(([key, title, help]) => {
+        const list = all.filter(c => c.source === key); if (!list.length) return;
+        h += `<h3>${esc(title)}</h3><p>${esc(help)}</p>` + list.map(c => `<div class="item"><b>${logoHtml(c.name)}${esc(c.name)}${c.off ? '<span class="badge stop">oprit</span>' : ''}${c.last && Date.now() / 1000 - c.last < 86400 ? '<span class="badge">folosit azi</span>' : ''}</b>
+          <small>${esc(c.kind)}${c.plugin ? ', din ' + esc(c.plugin) : ''}</small><small>${c.last ? 'Folosit ultima dată ' + ago(c.last) : 'Nefolosit încă de când există biroul'}</small></div>`).join('');
+      });
+      h += `<div class="note">Înainte să legi un tool de datele clienților, /process verifică dacă e sigur (GDPR, contract de prelucrare).</div>`;
+    } else if (id === 'template') {
+      h += `<p>De aici vin versiunile noi ale AISpace. Le aduci cu <span class="cmd">/update-template</span>; ce a schimbat firma rămâne neatins.</p>`;
+    }
+    if (here.length) h += `<h3>Acum aici</h3>` + here.map(sessionItem).join('');
+    h += relatedGuides(GUIDES.filter(g => g.room === id));
+    return h;
+  }
+  function relatedGuides(list) {
+    return list.length ? `<h3>Ghiduri</h3>` + list.map(g => `<button class="item" data-guide="${g.id}"><b>${esc(g.title)}</b><small>${esc(g.intro)}</small></button>`).join('') : '';
+  }
+  function guideBody(g, step) {
+    const i = GUIDES.indexOf(g), prev = GUIDES[i - 1], next = GUIDES[i + 1];
+    const steps = g.steps.map((st, n) => {
+      const room = st.room ? ROOMS[st.room] : null;
+      return `<li${room ? ` class="room${n === step ? ' on' : ''}" data-step="${n}" tabindex="0" role="button" aria-pressed="${n === step}"` : ''}>${esc(st.t)}` +
+        (st.cmd ? `<div class="copy"><span class="cmd">${esc(st.cmd)}</span><button data-copy="${esc(st.cmd)}" aria-label="Copiază ${esc(st.cmd)}">Copiază</button></div>` : '') +
+        (room ? `<span class="where">Se întâmplă în: ${esc(room.title)}</span>` : '') + '</li>';
+    }).join('');
+    return `<p>${esc(g.intro)}</p><ol class="steps">${steps}</ol>` +
+      (g.note ? `<div class="note">${esc(g.note)}</div>` : '') +
+      `<div class="guide-nav">` +
+      (prev ? `<button data-guide="${prev.id}"><small>Înapoi</small>${esc(prev.title)}</button>` : '') +
+      (next ? `<button data-guide="${next.id}"><small>Următorul</small>${esc(next.title)}</button>` : '') + `</div>`;
+  }
+  function openPanel(kind, id, opts = {}) {
+    const d = UI.data || normalizeData(null);
+    let title = '', path = '', body = '';
+    if (kind === 'room') {
+      const r = ROOMS[id]; if (!r) return;
+      title = r.title; path = r.path; body = roomBody(id);
+    } else if (kind === 'skill') {
+      const s = d.skills.find(x => x.name === id); if (!s) return;
+      title = '/' + s.name; path = s.template ? 'Foundation Skill, vine cu AISpace' : (s.personal ? 'Custom Skill, doar al tău' : 'Custom Skill al firmei');
+      body = (s.description ? `<p>${esc(s.description)}</p>` : '') +
+        (s.when ? `<h3>Când îl folosești</h3><p>Când ${esc(s.when.replace(/^userul /, 'cineva '))}.</p>` : '') +
+        `<h3>Cine îl poate folosi</h3><p>${s.who === 'owner' ? 'Doar owner-ii.' : 'Oricine din echipă.'}</p>` +
+        `<h3>Cum îl pornești</h3><p>Scrie comanda în Claude Code.</p><div class="copy"><span class="cmd">/${esc(s.name)}</span><button data-copy="/${esc(s.name)}" aria-label="Copiază /${esc(s.name)}">Copiază</button></div>`;
+      const here = UI.live.sessions.filter(x => x.target === s.name);
+      if (here.length) body += `<h3>Acum îl folosește</h3>` + here.map(sessionItem).join('');
+      body += relatedGuides(GUIDES.filter(g => g.steps.some(st => st.cmd === '/' + s.name)));
+    } else if (kind === 'guide') {
+      const g = GUIDES.find(x => x.id === id); if (!g) return;
+      const step = opts.keep && panelState && panelState.id === id ? panelState.step : -1;
+      title = g.title; path = g.who === 'owner' ? 'Ghid pentru owner-i' : 'Ghid pentru toată echipa';
+      body = guideBody(g, step);
+    } else if (kind === 'hooks') {
+      const list = hooksFor(id, d);
+      title = 'Sertarele de hooks'; path = id === 'workshop' ? 'Foundation Skills, venite cu AISpace' : 'Custom Skills, ale firmei';
+      body = `<p>Un hook e o regulă care pornește singură, la un moment anume, fără să o ceri: de exemplu înainte să se schimbe un fișier sau la finalul fiecărui răspuns. Fiecare sertar e un hook.</p>` +
+        (list.length ? list.map(hookItem).join('') : `<p>Încă niciun hook aici. Dacă o automatizare are nevoie de unul, /process îl face.</p>`);
+    } else if (kind === 'todo') {
+      const recs = recommendations(d);
+      title = 'De completat'; path = 'ca AI-ul să vă cunoască și să lucreze ca voi';
+      body = recs.length ? `<p>Câteva lucruri lipsesc. Copiază comanda și scrie-o în Claude Code; te ghidează pas cu pas.</p>` + recs.map(r => `<h3>${esc(ROOMS[r.room].title)}</h3>` + recHtml(r)).join('')
+        : '<p>Totul e completat. Biroul are tot ce-i trebuie.</p>';
+    } else if (kind === 'now') {
+      title = 'Acum'; path = 'sesiunile Claude deschise în acest proiect';
+      const ss = UI.live.sessions;
+      body = ss.length ? ss.map(sessionItem).join('') :
+        '<p>Nicio sesiune Claude deschisă acum. Când pornești Claude Code în acest folder, robotul lui intră pe ușa recepției și merge acolo unde lucrează.</p>';
+    } else if (kind === 'session') {
+      const s = UI.live.sessions.find(x => x.id === id);
+      if (!s) { if (opts.keep) return openPanel('now'); return; }
+      title = s.label || 'Claude'; path = (s.person || 'Claude') + ', pornită ' + ago(s.since);
+      body = `<p>Claude ${esc(stateWord(s))}, în ${esc((ROOMS[s.room] || ROOMS.desk).title)}.</p>` +
+        (s.target ? `<div class="item"><b>Lucrează cu</b><small>${esc(s.target)}</small></div>` : '') +
+        `<div class="item"><b>Ultima mișcare</b><small>${ago(s.last)}</small></div>` +
+        (s.state === 'waiting' ? '<p>Întoarce-te în fereastra Claude Code: are nevoie de un răspuns sau de o cerere nouă.</p>' : '');
+    }
+    panelState = { kind, id, step: kind === 'guide' && opts.keep && panelState ? panelState.step : -1 };
+    renderGuideList();
+    $('panelTitle').textContent = title; $('panelPath').textContent = path; $('panelBody').innerHTML = body;
+    $('panel').classList.add('open');
+    if (!opts.keep) { UI.emit('select', { kind, id }); $('panelClose').focus({ preventScroll: true }); }
+  }
+  function closePanel() { panelState = null; $('panel').classList.remove('open'); renderGuideList(); UI.emit('select', null); }
+  UI.openPanel = openPanel; UI.closePanel = closePanel;
+
+  $('panelClose').addEventListener('click', closePanel);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && panelState) closePanel(); });
+  $('nowPill').addEventListener('click', () => openPanel('now'));
+  $('todoPill').addEventListener('click', () => openPanel('todo'));
+  $('panelBody').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b && b.dataset.copy) return copyText(b.dataset.copy, b);
+    if (b && b.dataset.skill) return openPanel('skill', b.dataset.skill);
+    if (b && b.dataset.session) return openPanel('session', b.dataset.session);
+    if (b && b.dataset.guide) return openPanel('guide', b.dataset.guide);
+    const li = e.target.closest('li[data-step]');
+    if (li) focusStep(+li.dataset.step);
+  });
+  $('panelBody').addEventListener('keydown', e => {
+    const li = e.target.closest('li[data-step]');
+    if (li && e.target === li && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); focusStep(+li.dataset.step); }
+  });
+
+  // ---------- ghiduri ----------
+  function focusStep(n) {
+    if (!panelState || panelState.kind !== 'guide') return;
+    const g = GUIDES.find(x => x.id === panelState.id), st = g && g.steps[n];
+    if (!st || !st.room) return;
+    panelState.step = n;
+    $('panelBody').querySelectorAll('li[data-step]').forEach(li => {
+      const on = +li.dataset.step === n;
+      li.classList.toggle('on', on); li.setAttribute('aria-pressed', on);
+    });
+    UI.emit('focus', { room: st.room });
+  }
+  function copyText(text, btn) {
+    const done = () => { btn.textContent = 'Copiat'; setTimeout(() => btn.textContent = 'Copiază', 1500); };
+    const fallback = () => {
+      const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      ta.remove();
+    };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  }
+  let guideQuery = '';
+  function renderGuideList() {
+    const q = guideQuery.toLowerCase(), current = panelState && panelState.kind === 'guide' ? panelState.id : '';
+    const match = g => !q || (g.title + ' ' + g.intro + ' ' + g.steps.map(s => s.t + ' ' + (s.cmd || '')).join(' ')).toLowerCase().includes(q);
+    const groups = [...new Set(GUIDES.map(g => g.group))];
+    const html = groups.map(gr => {
+      const items = GUIDES.filter(g => g.group === gr && match(g));
+      return items.length ? `<h3>${esc(gr)}</h3>` + items.map(g => `<button class="item guide-btn" data-guide="${g.id}" aria-current="${g.id === current}"><b>${esc(g.title)}</b><small>${g.steps.length} pași</small></button>`).join('') : '';
+    }).join('');
+    $('guideItems').innerHTML = html || '<p>Niciun ghid nu se potrivește. Încearcă alt cuvânt.</p>';
+  }
+  $('guideItems').addEventListener('click', e => { const b = e.target.closest('[data-guide]'); if (b) openPanel('guide', b.dataset.guide); });
+  $('guideSearch').addEventListener('input', e => { guideQuery = e.target.value.trim(); renderGuideList(); });
+
+  // ---------- modul: Explorează / Cum fac ----------
+  let hintShown = false;
+  function setMode(mode) {
+    UI.mode = mode;
+    $('modeGuides').setAttribute('aria-selected', mode === 'guides');
+    $('modeExplore').setAttribute('aria-selected', mode === 'explore');
+    $('modeScenes').setAttribute('aria-selected', mode === 'scenes');
+    $('guideList').classList.toggle('open', mode === 'guides');
+    $('sceneList').classList.toggle('open', mode === 'scenes');
+    if (mode !== 'scenes') stopScene();
+    if (mode === 'explore' && !hintShown) {
+      hintShown = true;
+      let seen = false;
+      try { seen = !!localStorage.getItem('aios-hint'); localStorage.setItem('aios-hint', '1'); } catch (e) {}
+      if (!seen) { $('hint').style.display = 'block'; setTimeout(() => $('hint').style.display = 'none', 10000); }
+    }
+    if (mode !== 'guides' && panelState && panelState.kind === 'guide') closePanel();
+    UI.emit('mode', mode);
+  }
+  UI.setMode = setMode;
+  $('modeGuides').addEventListener('click', () => setMode('guides'));
+  $('modeExplore').addEventListener('click', () => setMode('explore'));
+  $('modeScenes').addEventListener('click', () => setMode('scenes'));
+
+  // ---------- scene ----------
+  // Un pas trece mai departe când s-a terminat și animația din 3D (UI.beatDone), și timpul de citit.
+  let play = null; // { scene, i, playing, read, anim, timer }
+  function readTime(text) { return 1800 + text.split(/\s+/).length * 260; }
+  function renderSceneList() {
+    $('sceneItems').innerHTML = SCENES.map(sc => `<button class="item scene-btn" data-scene="${sc.id}" aria-current="${!!play && play.scene.id === sc.id}">
+      <b>${esc(sc.title)}</b><small>${esc(sc.intro)}</small></button>`).join('');
+  }
+  function renderPlayer() {
+    if (!play) { $('player').classList.remove('open'); return; }
+    const sc = play.scene, n = sc.beats.length, last = play.i === n - 1;
+    $('player').classList.add('open');
+    $('playerTitle').textContent = sc.title;
+    $('playerStep').textContent = `Pasul ${play.i + 1} din ${n}`;
+    $('playerSay').textContent = sc.beats[play.i].say;
+    $('playerPrev').disabled = play.i === 0;
+    $('playerNext').disabled = last;
+    $('playerPlay').textContent = play.playing ? 'Pauză' : (last && play.read && play.anim ? 'Reia' : 'Redă');
+    $('playerDots').innerHTML = sc.beats.map((b, k) => `<button class="${k < play.i ? 'done' : k === play.i ? 'on' : ''}" data-beat="${k}" aria-label="Pasul ${k + 1}"></button>`).join('');
+  }
+  function goBeat(i, jump) {
+    clearTimeout(play.timer);
+    play.i = i; play.read = false; play.anim = !window.__aiosReady;
+    renderPlayer();
+    UI.emit('beat', { scene: play.scene, index: i, jump: !!jump });
+    play.timer = setTimeout(() => { play.read = true; advance(); }, readTime(play.scene.beats[i].say));
+  }
+  function advance() {
+    if (!play || !play.read || !play.anim) return;
+    if (play.i >= play.scene.beats.length - 1) { play.playing = false; renderPlayer(); return; }
+    if (play.playing) { clearTimeout(play.timer); play.timer = setTimeout(() => goBeat(play.i + 1), 600); }
+  }
+  UI.beatDone = () => { if (play) { play.anim = true; renderPlayer(); advance(); } };
+  function openScene(id) {
+    const scene = SCENES.find(x => x.id === id); if (!scene) return;
+    if (play) clearTimeout(play.timer);
+    play = { scene, i: 0, playing: true };
+    renderSceneList();
+    goBeat(0, true);
+    $('playerPlay').focus({ preventScroll: true });
+  }
+  function stopScene() {
+    if (!play) return;
+    clearTimeout(play.timer); play = null;
+    renderPlayer(); renderSceneList();
+    UI.emit('beat', null);
+  }
+  UI.openScene = openScene;
+  $('sceneItems').addEventListener('click', e => { const b = e.target.closest('[data-scene]'); if (b) openScene(b.dataset.scene); });
+  $('playerClose').addEventListener('click', stopScene);
+  $('playerPrev').addEventListener('click', () => { if (play && play.i > 0) { play.playing = false; goBeat(play.i - 1, true); } });
+  $('playerNext').addEventListener('click', () => { if (play && play.i < play.scene.beats.length - 1) goBeat(play.i + 1); });
+  $('playerPlay').addEventListener('click', () => {
+    if (!play) return;
+    const last = play.i === play.scene.beats.length - 1;
+    if (!play.playing && last && play.read && play.anim) { play.playing = true; return goBeat(0, true); }
+    play.playing = !play.playing; renderPlayer(); advance();
+  });
+  $('playerDots').addEventListener('click', e => {
+    const b = e.target.closest('[data-beat]'); if (!b || !play) return;
+    const k = +b.dataset.beat; goBeat(k, k !== play.i + 1);
+  });
+  renderSceneList();
+
+  // ---------- dacă 3D-ul nu pornește ----------
+  $('fallbackRooms').innerHTML = Object.entries(ROOMS).map(([id, r]) => `<button class="item" data-room="${id}"><b>${esc(r.title)}</b><small>${esc(r.path)}</small></button>`).join('');
+  $('fallbackRooms').addEventListener('click', e => { const b = e.target.closest('[data-room]'); if (b) openPanel('room', b.dataset.room); });
+  UI.fail = () => { if (!window.__aiosReady) $('fallback').style.display = 'block'; };
+  setTimeout(UI.fail, 9000);
+
+  UI.data = normalizeData(window.AIOS_DATA);
+  renderChrome();
+  renderGuideList();
+  setMode('guides');
+  pollData();
+  pollLive();
+})();
+</script>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const UI = window.AIOS_UI;
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const C = {
+  air: 0xE6ECEF, ground: 0xD6DEE3, oak: 0xE3CCA8, oakEdge: 0xC4A57C, wall: 0xF6F6F2,
+  sage: 0xD3E2D6, mist: 0xD4E0EB, sand: 0xEFE0C8, blush: 0xEDD5D2, mint: 0xD8E8DF, lilac: 0xE1DBEC, butter: 0xF3E5C2,
+  pine: 0x1F5C4F, saffron: 0xF2B33D, cherry: 0xD64550, ink: 0x1D2430, gold: 0xF0D99A, white: 0xFAFAF7, claude: 0xD97757
+};
+
+// ---------- scena ----------
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+} catch (e) { UI.fail(); throw e; }
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.getElementById('stage').appendChild(renderer.domElement);
+const labelRenderer = new CSS2DRenderer({ element: document.getElementById('labels') });
+labelRenderer.setSize(innerWidth, innerHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(C.air);
+scene.fog = new THREE.Fog(C.air, 60, 120);
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.5, 300);
+const HOME = { pos: new THREE.Vector3(5, 34, 39), target: new THREE.Vector3(1, 0, -1.5) };
+camera.position.copy(HOME.pos);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.copy(HOME.target);
+controls.enableDamping = true;
+controls.maxPolarAngle = 1.25;
+controls.minDistance = 12; controls.maxDistance = 90;
+controls.update();
+
+scene.add(new THREE.HemisphereLight(0xF4F7FA, 0xB9AE9C, 1.6));
+const sun = new THREE.DirectionalLight(0xFFF1DC, 2.2);
+sun.position.set(-26, 40, -18);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 120 });
+sun.shadow.bias = -0.0005;
+scene.add(sun);
+
+const mats = {};
+const mat = (color, extra = {}) => {
+  const k = color + JSON.stringify(extra);
+  return mats[k] || (mats[k] = new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0, ...extra }));
+};
+function box(w, h, d, color, x, y, z, { r = 0.06, parent = scene, shadow = true, m } = {}) {
+  const g = r > 0 ? new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2, h / 2, d / 2)) : new THREE.BoxGeometry(w, h, d);
+  const mesh = new THREE.Mesh(g, m || mat(color));
+  mesh.position.set(x, y, z);
+  mesh.castShadow = shadow; mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+function cyl(rt, rb, h, color, x, y, z, { parent = scene, seg = 24, m } = {}) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m || mat(color));
+  mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true;
+  parent.add(mesh); return mesh;
+}
+function label(el, x, y, z, parent = scene) {
+  const o = new CSS2DObject(el); o.position.set(x, y, z); parent.add(o); return o;
+}
+const rand = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+
+// teren și podea
+const ground = new THREE.Mesh(new THREE.CircleGeometry(140, 64), mat(C.ground));
+ground.rotation.x = -Math.PI / 2; ground.position.y = -0.42; ground.receiveShadow = true; scene.add(ground);
+box(35.4, 0.36, 24, C.oakEdge, 0, -0.26, -0.2, { r: 0.5 });
+box(35, 0.3, 23.6, C.oak, 0, -0.2, -0.2, { r: 0.5 });
+
+// doar pereți joși între camere; fără pereți înalți: se vede și ce e în afara biroului (șablonul, poarta, GitHub)
+const LOW = 0.9;
+// Camera firmei (cunoștințe, documente, echipă, seif) are aceeași adâncime ca Foundation Skills: peretele din față la z -0.7,
+// cu ușa la x -11.6..-9.6. În fața ei rămâne loc liber și holul spre conectori. Uși spre Foundation Skills (x 1..4.2) și Custom Skills (11.6..14.6).
+for (const [a, b] of [[-3.4, 1], [4.2, 11.6], [14.6, 17.5]]) box(b - a, LOW, 0.2, C.wall, (a + b) / 2, LOW / 2 - 0.05, -0.7);
+box(0.2, LOW, 11.1, C.wall, -3.4, LOW / 2 - 0.05, -6.25);
+for (const [a, b] of [[-17.2, -11.6], [-9.6, -3.4]]) box(b - a, LOW, 0.2, C.wall, (a + b) / 2, LOW / 2 - 0.05, -0.7);
+box(14.8, 0.03, 1.8, 0xEFE7D8, -10.0, -0.035, 2.3, { r: 0.02, shadow: false }); // holul: drumul liber spre conectori (de la recepție la marginea podelei)
+box(0.2, LOW, 11.1, C.wall, 9.1, LOW / 2 - 0.05, -6.25); // între Foundation și Custom Skills
+
+// camere: covor + etichetă
+const ROOMS = {
+  library:  { x: -10.2, z: -5.9, w: 12.6, d: 10.4, tint: C.sage },
+  workshop: { x: 2.85,  z: -6.2, w: 11.5, d: 9.8, tint: C.mist },
+  custom:   { x: 13.15, z: -6.2, w: 7.1,  d: 9.8, tint: C.gold },
+  // în camera firmei, pe un rând în fața rafturilor: documente, echipă, seif
+  inbox:    { x: -13.9, z: -3.9, w: 4.8,  d: 5.0, tint: C.sand, inside: true },
+  team:     { x: -9.1,  z: -3.9, w: 4.2,  d: 5.0, tint: C.lilac, inside: true },
+  safe:     { x: -5.4,  z: -3.9, w: 2.6,  d: 5.0, tint: C.blush, inside: true },
+  desk:     { x: 3.1,   z: 4.6,  w: 11.8, d: 8.2, tint: C.mint },
+  gate:     { x: 21.6,  z: -1.5, out: true },
+  github:   { x: 27.4,  z: -5,   out: true },
+  template: { x: 0,     z: -27,  out: true },
+  connectors: { x: -25,  z: 2,    out: true },
+  web:        { x: 14,   z: 5.2,  out: true } // cabina de internet, în colțul din dreapta-față
+};
+const zoneEls = {};
+for (const [id, r] of Object.entries(ROOMS)) {
+  if (!r.out) box(r.w - 0.5, 0.04, r.d - 0.5, r.tint, r.x, r.inside ? -0.01 : -0.03, r.z, { r: 0.02, shadow: false });
+  const el = document.createElement('button');
+  el.className = 'zone' + (r.out ? ' out' : '');
+  // textContent, nu innerHTML: titlul camerei firmei vine din team/profile.md
+  const tb = document.createElement('b'); tb.textContent = UI.ROOMS[id].title;
+  const ts = document.createElement('small'); ts.textContent = UI.ROOMS[id].path;
+  el.append(tb, ts);
+  el.addEventListener('click', () => UI.openPanel('room', id));
+  zoneEls[id] = el;
+  const ly = r.out ? (id === 'github' ? 9.5 : id === 'template' ? 6 : id === 'connectors' ? 2.6 : id === 'web' ? 4.2 : 5.6) : 3.6;
+  // eticheta Echipei stă în fața covorului, ca să nu se suprapună cu Documente și Seiful
+  const lz = r.out ? (id === 'connectors' ? -6.6 : r.z) : id === 'team' ? r.z + r.d / 2 - 0.4 : r.z - r.d / 2 + 1.2;
+  label(el, r.x, ly, lz);
+}
+
+// ---------- robotul ----------
+const botGeo = {
+  body: new THREE.CapsuleGeometry(0.34, 0.42, 6, 16),
+  belt: new THREE.TorusGeometry(0.35, 0.06, 10, 28),
+  head: new RoundedBoxGeometry(0.72, 0.52, 0.56, 3, 0.18),
+  face: new RoundedBoxGeometry(0.56, 0.32, 0.05, 2, 0.08),
+  eye: new THREE.SphereGeometry(0.055, 12, 10),
+  stick: new THREE.CylinderGeometry(0.018, 0.018, 0.3, 8),
+  ball: new THREE.SphereGeometry(0.075, 14, 12),
+  arm: new THREE.CapsuleGeometry(0.07, 0.24, 4, 8)
+};
+const eyeMat = new THREE.MeshStandardMaterial({ color: 0x8FE3C3, emissive: 0x8FE3C3, emissiveIntensity: 1.4 });
+function makeRobot(beltColor, { seated = false } = {}) {
+  const g = new THREE.Group(), core = new THREE.Group();
+  g.add(core);
+  const white = mat(C.white, { roughness: 0.6 });
+  const body = new THREE.Mesh(botGeo.body, white); body.position.y = 0.62; body.castShadow = true; core.add(body);
+  const belt = new THREE.Mesh(botGeo.belt, mat(beltColor)); belt.rotation.x = Math.PI / 2; belt.position.y = 0.58; core.add(belt);
+  const head = new THREE.Group(); head.position.y = 1.32; core.add(head);
+  const hm = new THREE.Mesh(botGeo.head, white); hm.castShadow = true; head.add(hm);
+  const face = new THREE.Mesh(botGeo.face, mat(0x26303C, { roughness: 0.4 })); face.position.z = 0.27; head.add(face);
+  const eyes = [-0.13, 0.13].map(x => { const e = new THREE.Mesh(botGeo.eye, eyeMat); e.position.set(x, 0.01, 0.3); head.add(e); return e; });
+  const stick = new THREE.Mesh(botGeo.stick, mat(0x9AA3AD)); stick.position.y = 0.4; head.add(stick);
+  const ballMat = new THREE.MeshStandardMaterial({ color: beltColor, emissive: beltColor, emissiveIntensity: 0.2, roughness: 0.5 });
+  const ball = new THREE.Mesh(botGeo.ball, ballMat); ball.position.y = 0.58; head.add(ball);
+  const arms = [-1, 1].map(s => {
+    const pivot = new THREE.Group(); pivot.position.set(s * 0.4, 0.86, 0); core.add(pivot);
+    const a = new THREE.Mesh(botGeo.arm, white); a.position.y = -0.16; a.castShadow = true; pivot.add(a);
+    pivot.rotation.z = s * 0.25;
+    if (seated) pivot.rotation.x = -1.1;
+    return pivot;
+  });
+  return { group: g, core, head, eyes, arms, ball, ballMat, seated, phase: rand() * 10, blinkAt: 2 + rand() * 4 };
+}
+const robots = [];
+function animateRobot(r, t, dt) {
+  if (REDUCED) return;
+  r.core.position.y = (r.seated ? 0 : 0.12) + Math.sin(t * 2 + r.phase) * (r.seated ? 0.01 : 0.05);
+  r.blinkAt -= dt;
+  const blink = r.blinkAt < 0 && r.blinkAt > -0.12;
+  r.eyes.forEach(e => e.scale.y = blink ? 0.15 : 1);
+  if (r.blinkAt < -0.12) r.blinkAt = 2.5 + rand() * 4;
+  if (r.typing) r.arms.forEach((a, i) => a.rotation.x = -1.1 + Math.sin(t * 14 + i * Math.PI + r.phase) * 0.12);
+}
+
+// ---------- mobilier ----------
+function chair(x, z, rot = 0, parent = scene) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; parent.add(g);
+  box(0.62, 0.1, 0.6, 0x9AA6A0, 0, 0.5, 0, { parent: g });
+  box(0.62, 0.62, 0.1, 0x9AA6A0, 0, 0.82, -0.27, { parent: g });
+  cyl(0.04, 0.04, 0.45, 0x7D8794, 0, 0.24, 0, { parent: g });
+  return g;
+}
+const clickable = []; // robotii de la birouri: click deschide panoul skill-ului
+function deskWithBot(x, z, { own = false, name = '' } = {}) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
+  g.userData.skill = name; clickable.push(g);
+  box(1.7, 0.08, 0.9, own ? 0xE9CF8E : 0xEDE6D8, 0, 0.82, 0, { parent: g });
+  for (const sx of [-0.75, 0.75]) box(0.08, 0.8, 0.8, 0xD9D1C2, sx, 0.4, 0, { parent: g });
+  box(0.62, 0.3, 0.05, 0x2A3440, 0, 1.03, 0.3, { parent: g, r: 0.03 });
+  box(0.6, 0.02, 0.22, 0xCFD5DA, 0, 0.87, -0.08, { parent: g, r: 0.01 });
+  chair(0, -0.75, 0, g);
+  const bot = makeRobot(own ? C.saffron : C.pine, { seated: true });
+  bot.group.position.set(0, 0.28, -0.72); // fața spre noi
+  bot.typing = true; g.add(bot.group); robots.push(bot);
+  const el = document.createElement('button');
+  el.className = 'desk-tag skill-tag' + (own ? ' own' : ''); el.textContent = '/' + name;
+  el.addEventListener('click', () => UI.openPanel('skill', name));
+  label(el, 0, 2.15, -0.6, g);
+  return { group: g, x, z, name };
+}
+function bookcase(x, z, rot, faded) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g);
+  const m = faded ? mat(0xD9C6A6, { transparent: true, opacity: 0.45 }) : null;
+  box(1.9, 2.5, 0.55, 0xD9C6A6, 0, 1.25, 0, { parent: g, m });
+  for (let s = 0; s < 4; s++) {
+    const y = 0.32 + s * 0.58;
+    let bx = -0.82;
+    while (bx < 0.75) {
+      const w = 0.08 + rand() * 0.1, h = 0.32 + rand() * 0.16;
+      const hue = [0x8FA59A, 0xB7A27C, 0x9DB0C4, 0xC9A9A0, 0xA7A0B8, 0xD2C092, 0x7F948C][Math.floor(rand() * 7)];
+      const bm = faded ? mat(hue, { transparent: true, opacity: 0.4 }) : mat(hue);
+      box(w, h, 0.36, hue, bx + w / 2, y + h / 2, 0.06, { parent: g, r: 0.01, m: bm, shadow: false });
+      bx += w + 0.015;
+    }
+  }
+  return g;
+}
+function pawn(color, admin) {
+  const g = new THREE.Group();
+  const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.5, 6, 14), mat(color)); b.position.y = 0.55; b.castShadow = true; g.add(b);
+  const h = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 14), mat(0xF0DCC8)); h.position.y = 1.28; h.castShadow = true; g.add(h);
+  if (admin) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.05, 8, 24), mat(C.pine)); ring.rotation.x = Math.PI / 2; ring.position.y = 0.72; g.add(ring); }
+  return g;
+}
+
+// ---------- mobilier fix ----------
+// recepția: tejgheaua cu CLAUDE.md, unde intră fiecare sesiune
+box(4.2, 1.05, 0.9, 0xF2EEE6, -0.4, 0.52, 4.6, { r: 0.12 });
+box(4.4, 0.08, 1.1, C.pine, -0.4, 1.08, 4.6, { r: 0.04 });
+box(1.2, 0.05, 0.8, 0xFFFFFF, 0.9, 1.14, 4.6, { r: 0.02 }); // CLAUDE.md pe tejghea
+// seiful, în colțul din față-dreapta al cunoștințelor firmei
+box(1.6, 1.8, 1.3, 0x8C96A0, -5.4, 0.9, -4.4, { r: 0.12 });
+cyl(0.22, 0.22, 0.08, 0xDDE2E6, -5.4, 1.1, -3.73).rotation.x = Math.PI / 2;
+
+// cabina de internet: pereți de sticlă, intrarea spre noi, un ecran înăuntru și un glob pe acoperiș
+const booth = new THREE.Group(); booth.position.set(14, 0, 5.2); scene.add(booth);
+box(2.0, 0.12, 2.0, 0xE8E4DC, 0, 0.0, 0, { parent: booth, r: 0.05 });
+for (const [px, pz] of [[-0.92, -0.92], [0.92, -0.92], [-0.92, 0.92], [0.92, 0.92]]) box(0.14, 2.6, 0.14, C.white, px, 1.3, pz, { parent: booth, r: 0.05 });
+const glass = new THREE.MeshStandardMaterial({ color: 0xCFE3EE, transparent: true, opacity: 0.32, roughness: 0.2 });
+box(1.7, 2.4, 0.04, 0, 0, 1.25, -0.92, { parent: booth, r: 0, m: glass, shadow: false });
+for (const sx of [-0.92, 0.92]) box(0.04, 2.4, 1.7, 0, sx, 1.25, 0, { parent: booth, r: 0, m: glass, shadow: false });
+box(2.2, 0.22, 2.2, C.white, 0, 2.7, 0, { parent: booth, r: 0.08 });
+box(0.9, 0.6, 0.06, 0x26303C, 0, 1.5, -0.86, { parent: booth, r: 0.03 }); // ecranul
+box(0.8, 0.05, 0.3, 0xD9D1C2, 0, 1.0, -0.72, { parent: booth, r: 0.02 });
+const globeMat = new THREE.MeshStandardMaterial({ color: C.pine, emissive: C.pine, emissiveIntensity: 0.25, roughness: 0.5 });
+const globe = new THREE.Group(); globe.position.y = 3.25; booth.add(globe);
+globe.add(new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 16), globeMat));
+for (const r of [0, Math.PI / 2]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.025, 8, 32), mat(C.white)); ring.rotation.y = r; globe.add(ring); }
+const eq = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.025, 8, 32), mat(C.white)); eq.rotation.x = Math.PI / 2; globe.add(eq);
+
+// în afara biroului: poarta, GitHub, șablonul, poteci
+function path(points) {
+  for (let i = 0; i < points.length - 1; i++) {
+    const [ax, az] = points[i], [bx, bz] = points[i + 1];
+    const len = Math.hypot(bx - ax, bz - az);
+    const p = box(len + 1.4, 0.06, 1.4, 0xF1EEE7, (ax + bx) / 2, -0.38, (az + bz) / 2, { r: 0.03, shadow: false });
+    p.rotation.y = -Math.atan2(bz - az, bx - ax);
+  }
+}
+path([[17.5, 1.5], [21.6, -1.5], [27.4, -5]]);
+// holul continuă afară ca o pasarelă la nivelul podelei, aceeași lățime, până la platforma conectorilor (tot la nivelul podelei)
+box(3.8, 0.42, 1.8, 0xEFE7D8, -19.2, -0.23, 2.3, { r: 0.03 }); // pe mijlocul platformei (z 2.3)
+box(8.6, 0.42, 15.6, 0xEDEAE3, -25.1, -0.23, 2.3, { r: 0.3 }); // platforma conectorilor
+path([[0, -12.2], [0, -27]]);
+const gate = new THREE.Group(); gate.position.set(21.6, -0.38, -1.5); gate.rotation.y = -0.64; scene.add(gate);
+box(0.5, 3.2, 0.7, C.white, -1.4, 1.6, 0, { parent: gate, r: 0.15 });
+box(0.5, 3.2, 0.7, C.white, 1.4, 1.6, 0, { parent: gate, r: 0.15 });
+box(3.3, 0.5, 0.7, C.white, 0, 3.3, 0, { parent: gate, r: 0.15 });
+const scan = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.08), new THREE.MeshBasicMaterial({ color: C.pine, transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+scan.position.y = 1.5; gate.add(scan);
+const gateLightMat = new THREE.MeshStandardMaterial({ color: C.pine, emissive: C.pine, emissiveIntensity: 0.8 });
+const gateLight = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 12), gateLightMat); gateLight.position.set(0, 3.3, 0.4); gate.add(gateLight);
+const tower = new THREE.Group(); tower.position.set(27.4, -0.38, -5); tower.scale.setScalar(0.82); scene.add(tower);
+[[3.2, 1.6], [2.6, 1.6], [2, 1.6], [1.4, 1.4]].reduce((y, [w, h]) => { box(w, h, w, C.white, 0, y + h / 2, 0, { parent: tower, r: 0.25 }); return y + h; }, 0);
+const ringMat = new THREE.MeshStandardMaterial({ color: C.pine, emissive: C.pine, emissiveIntensity: 0.6 });
+const towerRing = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.09, 10, 40), ringMat); towerRing.rotation.x = Math.PI / 2; towerRing.position.y = 6.6; tower.add(towerRing);
+const house = new THREE.Group(); house.position.set(0, -0.38, -27); scene.add(house);
+box(4, 2.4, 3.4, C.white, 0, 1.2, 0, { parent: house, r: 0.1 });
+const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 2.9, 1.6, 4, 1), mat(0xE8E2D6)); roof.rotation.y = Math.PI / 4; roof.position.y = 3.2; roof.scale.z = 0.85; roof.castShadow = true; house.add(roof);
+cyl(0.04, 0.04, 2, 0x9AA3AD, 1.5, 3.4, 0.9, { parent: house });
+box(0.7, 0.42, 0.04, C.pine, 1.86, 4.1, 0.9, { parent: house, r: 0.02 });
+
+// ---------- conținut din date (se reconstruiește când se schimbă datele) ----------
+let dynamic = new THREE.Group(); scene.add(dynamic);
+const deskSpots = {}, deskRoom = {}, shelfSpots = {}, plugSpots = {};
+function clearDynamic() {
+  clickable.length = 0;
+  dynamic.traverse(o => { if (o.isCSS2DObject) o.element.remove(); });
+  scene.remove(dynamic);
+  for (let i = robots.length - 1; i >= 0; i--) if (robots[i].dynamic) robots.splice(i, 1);
+  dynamic = new THREE.Group(); scene.add(dynamic);
+  for (const k in deskSpots) delete deskSpots[k];
+  for (const k in shelfSpots) delete shelfSpots[k];
+  for (const k in plugSpots) delete plugSpots[k];
+  for (const k in deskRoom) delete deskRoom[k];
+}
+function build(d) {
+  clearDynamic();
+  zoneEls.library.querySelector('b').textContent = UI.ROOMS.library.title; // numele firmei
+  // camera goală: un rând galben în eticheta ei, cu skill-ul care o completează (click: panoul camerei, cu ghidul)
+  document.querySelectorAll('.zone-todo').forEach(e => e.remove());
+  UI.recommendations().forEach(r => {
+    const z = zoneEls[r.room]; if (!z) return;
+    const t = document.createElement('span'); t.className = 'zone-todo';
+    t.append('Gol. Scrie ');
+    const c = document.createElement('code'); c.textContent = r.cmd; t.append(c);
+    z.append(t);
+  });
+  const addTo = fn => { const before = scene.children.length; fn(); const added = scene.children.splice(before); added.forEach(o => dynamic.add(o)); };
+  const robotsBefore = robots.length;
+  addTo(() => {
+    // biblioteca: un raft pe fișier, între 5 și 9
+    const files = d.context.slice(0, 9);
+    const n = Math.min(7, Math.max(5, files.length)); // 5 pe peretele din spate, 2 pe stânga
+    for (let i = 0; i < n; i++) {
+      const back = i < 5;
+      const x = back ? -15.4 + i * 2.25 : -16.9, z = back ? -11.35 : -9.0 + (i - 5) * 1.95;
+      bookcase(x, z, back ? 0 : Math.PI / 2, !d.setUp || !files[i]);
+      if (files[i]) shelfSpots[files[i].file] = back ? [x, z + 1.1] : [x + 1.1, z];
+    }
+    // Foundation Skills (venite cu AISpace): 4 birouri pe rând, 3 rânduri
+    const built = d.skills.filter(s => s.template), own = d.skills.filter(s => !s.template);
+    const ROWS = [-10.0, -7.4, -4.8];
+    built.slice(0, 12).forEach((s, i) => {
+      const x = -2.9 + (11.5 / 4) * (i % 4 + 0.5), z = ROWS[Math.floor(i / 4)];
+      deskWithBot(x, z, { name: s.name });
+      deskSpots[s.name] = [x + 1.25, z + 0.9]; deskRoom[s.name] = 'workshop';
+    });
+    // Custom Skills (ale firmei): 2 birouri pe rând, pe podeaua aurie
+    own.slice(0, 6).forEach((s, i) => {
+      const x = 9.6 + (7.1 / 2) * (i % 2 + 0.5), z = ROWS[Math.floor(i / 2)];
+      deskWithBot(x, z, { own: true, name: s.name });
+      deskSpots[s.name] = [x + 1.25, z + 0.9]; deskRoom[s.name] = 'custom';
+    });
+    // sertarele de hooks: un dulap în fiecare cameră de skill-uri, câte un sertar pe hook
+    const cabinet = (room, x, z, list, own) => {
+      const n = Math.max(1, Math.min(list.length, 6)), h = 0.25 + n * 0.42;
+      box(1.3, h, 0.7, own ? 0xE9DDBE : 0xE2E6EA, x, h / 2, z, { r: 0.06 });
+      for (let i = 0; i < n; i++) {
+        const y = 0.3 + i * 0.42;
+        box(1.16, 0.34, 0.05, own ? 0xF3E8CC : 0xF1F3F5, x, y, z + 0.36, { r: 0.03 });
+        box(0.36, 0.05, 0.05, 0x9AA3AD, x, y + 0.06, z + 0.4, { r: 0.02 });
+        if (list[i]) {
+          const t = document.createElement('div'); t.className = 'desk-tag skill-tag' + (own ? ' own' : ''); t.textContent = list[i].name;
+          label(t, x + 1.2, y, z + 0.3);
+        }
+      }
+      const el = document.createElement('button'); el.className = 'hook-tag' + (own ? ' own' : '');
+      el.textContent = list.length ? `Hooks (${list.length})` : 'Hooks (gol)';
+      el.setAttribute('aria-label', `Sertarele de hooks din ${UI.ROOMS[room].title}`);
+      el.addEventListener('click', () => UI.openPanel('hooks', room));
+      label(el, x, h + 0.5, z);
+    };
+    const hooks = d.hooks || [];
+    cabinet('workshop', 7.6, -2.6, hooks.filter(h => h.template), false);
+    cabinet('custom', 16.0, -2.6, hooks.filter(h => !h.template), true);
+
+    // documente: cutii, câte una pe fișier (maxim 8)
+    box(2.4, 0.9, 1.2, 0xE8DDCB, -13.9, 0.45, -4.4, { r: 0.08 });
+    for (let i = 0; i < Math.min(d.inboxCount, 8); i++) {
+      box(0.75, 0.5, 0.6, i % 2 ? 0xE2C79A : 0xD8B98A, -15.0 + (i % 4) * 0.78, 1.15 + Math.floor(i / 4) * 0.52, -4.4, { r: 0.04 });
+    }
+    // echipa: pioni
+    const tones = [0x9DB0C4, 0xC9A9A0, 0xA7A0B8, 0x8FA59A, 0xD2C092, 0xB7A27C];
+    d.team.slice(0, 9).forEach((p, i) => {
+      const pw = pawn(tones[i % tones.length], p.admin);
+      pw.position.set(-10.5 + (i % 3) * 1.4, 0, -5.2 + Math.floor(i / 3) * 1.3); pw.rotation.y = 0.3;
+      label(tagEl(p.name, 'person-tag'), 0, 1.75, 0, pw);
+      scene.add(pw);
+    });
+    // conectori: câte un stâlp, două coloane; inelul arată sursa, becul dacă a fost folosit în ultima zi
+    const SRC_COLOR = { 'claude.ai': C.claude, plugin: 0xA7A0B8, proiect: C.pine };
+    (d.connectors || []).slice(0, 12).forEach((c, i) => {
+      const x = i % 2 ? -22.6 : -27.6, z = -4.6 + Math.floor(i / 2) * 2.6 + (i % 2) * 1.3; // coloana dreaptă decalată: etichetele nu se suprapun
+      box(0.8, 1.1, 0.8, C.white, x, 0.2, z, { r: 0.2 });
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.43, 0.06, 8, 24), mat(SRC_COLOR[c.source] || 0x9AA3AD));
+      ring.rotation.x = Math.PI / 2; ring.position.set(x, 0.45, z); scene.add(ring);
+      const used = c.last && Date.now() / 1000 - c.last < 86400;
+      const col = c.off ? C.cherry : used ? C.pine : 0xB9C2CB;
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 12), new THREE.MeshStandardMaterial({ color: col, emissive: used || c.off ? col : 0x000000, emissiveIntensity: 0.7 }));
+      bulb.position.set(x, 0.9, z); scene.add(bulb);
+      const el = document.createElement('button'); el.className = 'plug-tag';
+      el.innerHTML = UI.logoHtml(c.name);
+      el.append(c.name); // numele ca text, nu HTML
+      el.setAttribute('aria-label', 'Conector ' + c.name);
+      el.addEventListener('click', () => UI.openPanel('room', 'connectors'));
+      label(el, x, 1.5, z);
+      plugSpots[c.name] = [x + (i % 2 ? -1.1 : 1.1), z + 0.5];
+    });
+
+  });
+  for (let i = robotsBefore; i < robots.length; i++) robots[i].dynamic = true;
+}
+
+// ---------- sesiunile Claude: roboți care merg ----------
+const SPOTS = {
+  desk: [1.8, 2.8], library: [-12.6, -5.6], workshop: [2.6, -2.4], custom: [13.1, -2.4], inbox: [-12.6, -2.0], safe: [-5.4, -2.4],
+  team: [-9.1, -1.8], gate: [21.6, 0.2], github: [25.0, -3.0], template: [1.8, -25.5],
+  connectors: [-25, 5.2], web: [14, 5.0]
+};
+const ZONE = r => ({ library: 'L', safe: 'L', inbox: 'L', team: 'L', workshop: 'S', custom: 'K', template: 'T', gate: 'O', github: 'O', connectors: 'C', web: 'W' }[r] || 'F');
+// zonele formează un copac: L, S, O ies în față (F); T (șablonul) iese prin ușa din spate în S.
+// Fiecare ușă: [punct în zonă, punct în zona-părinte].
+const PARENT = { L: 'F', S: 'F', K: 'F', O: 'F', T: 'S', C: 'F', W: 'F' };
+const DOORS = { L: [[-10.6, -1.8], [-10.6, 1.0]], S: [[2.6, -1.8], [2.6, 0.4]], K: [[13.1, -1.8], [13.1, 0.4]], O: [[19.2, 0.6], [17.2, 2.2]], T: [[0, -13.4], [0, -10.6]], C: [[-21.2, 2.3], [-17.0, 2.3]], W: [[14, 5.4], [14, 7.6]] }; // W: intră în cabină prin față
+const chain = z => z === 'F' ? ['F'] : [z, ...chain(PARENT[z])];
+function route(fromRoom, toRoom, to) {
+  const up = chain(ZONE(fromRoom)), down = chain(ZONE(toRoom));
+  while (up.length > 1 && down.length > 1 && up[up.length - 2] === down[down.length - 2]) { up.pop(); down.pop(); }
+  const pts = [];
+  up.slice(0, -1).forEach(z => pts.push(DOORS[z][0], DOORS[z][1]));
+  down.slice(0, -1).reverse().forEach(z => pts.push(DOORS[z][1], DOORS[z][0]));
+  pts.push(to);
+  return pts.map(([x, z]) => new THREE.Vector3(x, 0, z));
+}
+const walkers = new Map();
+const STATE_COLOR = { arriving: C.claude, thinking: 0x9C8FD0, working: C.pine, waiting: C.saffron };
+function spotFor(s, idx) {
+  if ((s.room === 'workshop' || s.room === 'custom') && deskSpots[s.target]) return deskSpots[s.target];
+  if (s.room === 'library' && shelfSpots[s.target]) return shelfSpots[s.target];
+  if (s.room === 'connectors' && plugSpots[s.target]) return plugSpots[s.target];
+  const [x, z] = SPOTS[s.room] || SPOTS.desk;
+  return [x + (idx % 3) * 1.1 - 1.1, z + Math.floor(idx / 3) * 1.1];
+}
+function syncWalkers(live) {
+  const seen = new Set();
+  live.sessions.forEach((s, idx) => {
+    seen.add(s.id);
+    let w = walkers.get(s.id);
+    if (!w) {
+      const bot = makeRobot(C.claude);
+      bot.group.position.set(-0.4, 0, 12.6); // intră pe la recepție, din față
+      scene.add(bot.group); robots.push(bot);
+      const el = document.createElement('button'); el.className = 'bot-tag';
+      el.addEventListener('click', () => UI.openPanel('session', s.id));
+      const tag = label(el, 0, 2.35, 0, bot.group);
+      w = { bot, el, tag, room: 'entrance', path: [], key: '' };
+      walkers.set(s.id, w);
+    }
+    if ((s.room === 'workshop' || s.room === 'custom') && deskRoom[s.target]) s = { ...s, room: deskRoom[s.target] };
+    const [tx, tz] = spotFor(s, idx);
+    const key = `${s.room}|${tx}|${tz}`;
+    if (key !== w.key) {
+      w.path = route(w.room === 'entrance' ? 'desk' : w.room, s.room, [tx, tz]);
+      if (w.room === 'entrance') w.path.unshift(new THREE.Vector3(-0.4, 0, 10.4));
+      w.key = key; w.room = s.room;
+      if (REDUCED) { const end = w.path[w.path.length - 1]; w.bot.group.position.copy(end); w.path = []; }
+    }
+    w.state = s.state;
+    w.bot.ballMat.color.setHex(STATE_COLOR[s.state] || C.pine);
+    w.bot.ballMat.emissive.setHex(STATE_COLOR[s.state] || C.pine);
+    w.el.className = 'bot-tag' + (s.state === 'waiting' ? ' waiting' : '');
+    // textContent, nu innerHTML: eticheta conține nume de fișiere
+    const who = document.createElement('b');
+    who.textContent = s.person ? s.person.split(' ')[0] : 'Claude';
+    w.el.replaceChildren(who, ' ' + (s.label || ''));
+    w.el.setAttribute('aria-label', `Sesiune Claude: ${s.label || ''}`);
+  });
+  for (const [id, w] of walkers) {
+    if (seen.has(id)) continue;
+    w.el.remove(); scene.remove(w.bot.group);
+    robots.splice(robots.indexOf(w.bot), 1);
+    walkers.delete(id);
+  }
+}
+function stepWalkers(t, dt) {
+  for (const w of walkers.values()) {
+    const g = w.bot.group;
+    if (w.path.length) {
+      const next = w.path[0], dir = next.clone().sub(g.position); dir.y = 0;
+      const dist = dir.length(), step = 4.2 * dt;
+      if (dist <= step) { g.position.copy(next); w.path.shift(); }
+      else {
+        g.position.addScaledVector(dir.normalize(), step);
+        const want = Math.atan2(dir.x, dir.z);
+        g.rotation.y += Math.atan2(Math.sin(want - g.rotation.y), Math.cos(want - g.rotation.y)) * Math.min(1, dt * 10);
+      }
+      w.bot.typing = false;
+      w.bot.arms.forEach((a, i) => a.rotation.x = REDUCED ? 0 : Math.sin(t * 9 + i * Math.PI) * 0.5);
+    } else {
+      faceViewer(w.bot.group, dt);
+      w.bot.typing = w.state === 'working';
+      if (!w.bot.typing) w.bot.arms.forEach(a => a.rotation.x *= 0.9);
+      if (w.state === 'working' && w.bot.typing) w.bot.arms.forEach((a, i) => a.rotation.x = -0.9 + Math.sin(t * 14 + i * Math.PI) * 0.15);
+    }
+    if (!REDUCED) {
+      const pulse = w.state === 'thinking' ? 0.4 + Math.sin(t * 5) * 0.4 : w.state === 'waiting' ? (Math.sin(t * 3) > 0 ? 1.2 : 0.2) : 0.5;
+      w.bot.ballMat.emissiveIntensity = pulse;
+    }
+  }
+}
+
+// ---------- scene animate: actori, bilețele și poarta, după pașii din UI.SCENES ----------
+// Puncte de mers: [cameră, x, z]. 'skill:<nume>' = lângă biroul acelui skill.
+const SCENE_POINTS = {
+  entrance: ['desk', -0.4, 12.6], desk: ['desk', -0.4, 6.4], shelf: ['library', -13.1, -9.9], middle: ['library', -9.6, -7.6],
+  inbox: ['inbox', -12.4, -2.2], safe: ['safe', -5.4, -2.6], gate: ['gate', 20.6, -0.2],
+  github: ['github', 25.2, -3.2], ownFloor: ['custom', 13.1, -2.4], team: ['team', -9.1, -1.6], workshop: ['workshop', 2.6, -2.4]
+};
+// Locuri pentru bilețele: [x, y, z].
+const NOTE_SPOTS = {
+  counter: [0.9, 1.35, 4.6], shelf: [-13.1, 1.8, -10.9], inbox: [-13.9, 1.1, -4.4], outsideInbox: [-12.2, 3, 12.5],
+  safe: [-5.4, 2.0, -4.4], gate: [21.6, 4.1, -1.5], github: [27.4, 7.0, -5],
+  team: [-9.1, 2.4, -3.6], template: [0, 4.6, -27], backdoor: [0, 2.8, -11.2], workshop: [2.85, 2.4, -8.7],
+  ownFloor: [13.1, 1.1, -2.9], viewer: [-0.4, 3, 12.8]
+};
+const noteGeo = new RoundedBoxGeometry(0.62, 0.08, 0.46, 2, 0.03);
+const sceneActors = new Map(), sceneNotes = new Map();
+let sceneQueue = [], sceneCurrent = null, sceneBusy = false, sceneGate = null;
+
+function pointXZ(key) {
+  if (key.startsWith('skill:')) {
+    const d = deskSpots[key.slice(6)];
+    return d ? [deskRoom[key.slice(6)] || 'workshop', d[0], d[1]] : SCENE_POINTS.workshop;
+  }
+  return SCENE_POINTS[key] || SCENE_POINTS.desk;
+}
+function noteXYZ(key) {
+  if (key.startsWith('skill:')) { const d = deskSpots[key.slice(6)]; return d ? [d[0] - 1.25, 1.2, d[1] - 0.9] : NOTE_SPOTS.workshop; }
+  return NOTE_SPOTS[key] || NOTE_SPOTS.counter;
+}
+function tagEl(text, cls) { const el = document.createElement('div'); el.className = cls; el.textContent = text; return el; }
+function spawnActor(name, at, kind) {
+  removeActor(name);
+  const [room, x, z] = pointXZ(at);
+  let obj, bot = null;
+  if (kind === 'pawn') { obj = pawn(0x9DB0C4, false); }
+  else { bot = makeRobot(C.claude); obj = bot.group; robots.push(bot); }
+  obj.position.set(x, 0, z);
+  scene.add(obj);
+  label(tagEl(kind === 'pawn' ? 'Colegul tău' : 'Claude, exemplu', 'desk-tag own'), 0, kind === 'pawn' ? 1.9 : 2.3, 0, obj);
+  sceneActors.set(name, { obj, bot, room, path: [] });
+}
+function removeActor(name) {
+  const a = sceneActors.get(name); if (!a) return;
+  a.obj.traverse(o => { if (o.isCSS2DObject) o.element.remove(); });
+  scene.remove(a.obj);
+  if (a.bot) robots.splice(robots.indexOf(a.bot), 1);
+  sceneActors.delete(name);
+}
+function makeNote(name, at, text) {
+  removeNote(name);
+  const mesh = new THREE.Mesh(noteGeo, new THREE.MeshStandardMaterial({ color: C.saffron, roughness: 0.6, emissive: C.saffron, emissiveIntensity: 0.15 }));
+  mesh.castShadow = true;
+  mesh.position.set(...noteXYZ(at));
+  scene.add(mesh);
+  if (text) label(tagEl(text, 'desk-tag own'), 0, 0.42, 0, mesh);
+  const n = { mesh, carriedBy: null };
+  sceneNotes.set(name, n);
+  return n;
+}
+function removeNote(name) {
+  const n = sceneNotes.get(name); if (!n) return;
+  n.mesh.traverse(o => { if (o.isCSS2DObject) o.element.remove(); });
+  scene.remove(n.mesh); sceneNotes.delete(name);
+}
+function clearScene() {
+  [...sceneActors.keys()].forEach(removeActor);
+  [...sceneNotes.keys()].forEach(removeNote);
+  sceneQueue = []; sceneCurrent = null; sceneBusy = false; sceneGate = null;
+}
+
+// O acțiune pornită: întoarce null dacă s-a terminat pe loc, altfel {update(dt) -> true când e gata}.
+function startAction(act, instant) {
+  const [type, name, arg, extra] = act;
+  if (type === 'spawn') { spawnActor(name, arg, extra); return null; }
+  if (type === 'gate') { sceneGate = name; return null; }
+  if (type === 'hide') { removeNote(name); return null; }
+  if (type === 'note') {
+    const n = makeNote(name, arg, extra);
+    if (instant) return null;
+    n.mesh.scale.setScalar(0.01); let k = 0;
+    return { update(dt) { k = Math.min(1, k + dt * 3); n.mesh.scale.setScalar(Math.max(0.01, 1 - Math.pow(1 - k, 3))); return k >= 1; } };
+  }
+  if (type === 'pick') { const n = sceneNotes.get(name); if (n) n.carriedBy = arg; return null; }
+  if (type === 'walk') {
+    const a = sceneActors.get(name); if (!a) return null;
+    const [room, x, z] = pointXZ(arg);
+    a.path = route(a.room, room, [x, z]); a.room = room;
+    if (instant) { a.obj.position.copy(a.path[a.path.length - 1]); a.path = []; return null; }
+    return { update(dt) { return stepActor(a, dt); } };
+  }
+  if (type === 'fly' || type === 'drop') {
+    const n = sceneNotes.get(name); if (!n) return null;
+    const from = n.mesh.getWorldPosition(new THREE.Vector3()), to = new THREE.Vector3(...noteXYZ(arg));
+    n.carriedBy = null;
+    if (instant) { n.mesh.position.copy(to); return null; }
+    const dur = Math.min(2.2, 0.6 + from.distanceTo(to) / 14), lift = Math.min(6, 1 + from.distanceTo(to) / 4);
+    let k = 0;
+    return { update(dt) {
+      k = Math.min(1, k + dt / dur);
+      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      n.mesh.position.lerpVectors(from, to, e); n.mesh.position.y += Math.sin(Math.PI * e) * lift;
+      n.mesh.rotation.y = e * Math.PI * 2;
+      return k >= 1;
+    } };
+  }
+  return null;
+}
+function faceViewer(g, dt) {
+  const r = g.rotation.y, d = Math.atan2(Math.sin(-r), Math.cos(-r));
+  g.rotation.y = REDUCED ? 0 : r + d * Math.min(1, dt * 6);
+}
+function stepActor(a, dt) {
+  const g = a.obj;
+  if (!a.path.length) { faceViewer(g, dt); if (a.bot) a.bot.arms.forEach(x => x.rotation.x *= 0.8); return true; }
+  const next = a.path[0], dir = next.clone().sub(g.position); dir.y = 0;
+  const dist = dir.length(), step = 5 * dt;
+  if (dist <= step) { g.position.copy(next); a.path.shift(); }
+  else {
+    g.position.addScaledVector(dir.normalize(), step);
+    const want = Math.atan2(dir.x, dir.z);
+    g.rotation.y += Math.atan2(Math.sin(want - g.rotation.y), Math.cos(want - g.rotation.y)) * Math.min(1, dt * 10);
+  }
+  if (a.bot && !REDUCED) a.bot.arms.forEach((x, i) => x.rotation.x = Math.sin(performance.now() / 110 + i * Math.PI) * 0.5);
+  return !a.path.length;
+}
+function finishAction(type, name) {
+  if (type === 'walk') { const a = sceneActors.get(name); if (a && a.path.length) { a.obj.position.copy(a.path[a.path.length - 1]); a.path = []; } }
+  if (type === 'note') { const n = sceneNotes.get(name); if (n) n.mesh.scale.setScalar(1); }
+}
+function runSceneQueue(dt) {
+  while (sceneBusy) {
+    if (!sceneCurrent) {
+      if (!sceneQueue.length) { sceneBusy = false; UI.beatDone && UI.beatDone(); return; }
+      const act = sceneQueue.shift(), h = startAction(act, REDUCED);
+      if (!h) continue;
+      sceneCurrent = { ...h, act };
+    }
+    if (!sceneCurrent.update(dt)) return;
+    sceneCurrent = null; dt = 0;
+  }
+}
+UI.on('beat', b => {
+  if (!b) { clearScene(); highlight(null); lookHome(); return; }
+  const beats = b.scene.beats;
+  if (b.jump) {
+    clearScene();
+    for (let k = 0; k < b.index; k++) beats[k].do.forEach(a => startAction(a, true));
+  } else {
+    // pasul anterior încă se anima: îl termin pe loc, apoi pornesc pasul nou
+    if (sceneCurrent) {
+      const [type, name, arg] = sceneCurrent.act;
+      sceneCurrent = null;
+      if (type === 'fly' || type === 'drop') { const n = sceneNotes.get(name); if (n) n.mesh.position.set(...noteXYZ(arg)); }
+      else finishAction(type, name);
+    }
+    sceneQueue.forEach(a => startAction(a, true));
+  }
+  sceneQueue = beats[b.index].do.slice(); sceneCurrent = null; sceneBusy = true;
+  lookRoom(beats[b.index].room);
+});
+function updateSceneObjects(dt) {
+  for (const a of sceneActors.values()) if (!a.path.length) faceViewer(a.obj, dt);
+  for (const n of sceneNotes.values()) {
+    const a = n.carriedBy && sceneActors.get(n.carriedBy);
+    if (a) { n.mesh.position.copy(a.obj.localToWorld(new THREE.Vector3(0, 1.05, 0.55))); n.mesh.rotation.y = a.obj.rotation.y; }
+  }
+}
+
+// ---------- camera: zbor lin spre ce selectezi ----------
+let fly = null;
+function flyTo(target, distance = 26) {
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  const pos = target.clone().addScaledVector(dir, distance);
+  if (REDUCED) { controls.target.copy(target); camera.position.copy(pos); return; }
+  fly = { fromT: controls.target.clone(), toT: target, fromP: camera.position.clone(), toP: pos, k: 0 };
+}
+// Încadrare: punctul ales ajunge în mijlocul spațiului liber dintre panouri
+// (lista de ghiduri în stânga, panoul de detalii în dreapta).
+const LEFT_W = 330 + 14, RIGHT_W = 420 + 14;
+let view = { point: HOME.target.clone(), dist: HOME.pos.distanceTo(HOME.target), home: true };
+function frameView() {
+  const left = (UI.mode === 'guides' || UI.mode === 'scenes') ? LEFT_W : 0;
+  const right = document.getElementById('panel').classList.contains('open') ? RIGHT_W : 0;
+  const free = Math.max(innerWidth - left - right, 320);
+  // pentru vederea de ansamblu, mă dau mai în spate cât de îngust e spațiul liber
+  const dist = view.home ? view.dist * Math.pow(innerWidth / free, 0.75) : view.dist;
+  const visW = 2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+  const offPx = (left - right) / 2;
+  const camRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0); camRight.y = 0; camRight.normalize();
+  flyTo(view.point.clone().addScaledVector(camRight, -(offPx / innerWidth) * visW), dist);
+}
+function look(point, dist, home = false) { view = { point, dist, home }; frameView(); }
+function lookHome() { look(HOME.target.clone(), HOME.pos.distanceTo(HOME.target), true); }
+
+let selected = null;
+function highlight(id) {
+  if (selected) zoneEls[selected]?.classList.remove('sel');
+  selected = id || null;
+  if (selected) zoneEls[selected]?.classList.add('sel');
+}
+function lookRoom(id) {
+  const r = ROOMS[id]; if (!r) return;
+  highlight(id);
+  look(new THREE.Vector3(r.x, 0, r.z), r.out ? 24 : 28);
+}
+UI.on('select', sel => {
+  highlight(null);
+  if (!sel) return lookHome();
+  if (sel.kind === 'room') lookRoom(sel.id);
+  else if (sel.kind === 'guide') { const g = UI.GUIDES.find(x => x.id === sel.id); g ? lookRoom(g.room) : lookHome(); }
+  else if (sel.kind === 'skill' && deskSpots[sel.id]) { const [x, z] = deskSpots[sel.id]; look(new THREE.Vector3(x - 1, 0, z), 20); }
+  else if (sel.kind === 'session' && walkers.get(sel.id)) look(walkers.get(sel.id).bot.group.position.clone(), 20);
+  else lookHome();
+});
+UI.on('focus', f => lookRoom(f.room));
+UI.on('mode', () => frameView());
+
+UI.on('data', d => build(d));
+UI.on('live', live => syncWalkers(live));
+build(UI.data);
+syncWalkers(UI.live);
+camera.updateMatrixWorld(); lookHome(); if (fly) { fly.k = 1; controls.target.copy(fly.toT); camera.position.copy(fly.toP); fly = null; }
+
+
+
+// ---------- bucla ----------
+const clock = new THREE.Clock();
+let labelsFar = null;
+function frame() {
+  const raw = clock.getDelta(), dt = Math.min(raw, 0.05), t = clock.elapsedTime;
+  if (fly) {
+    fly.k = Math.min(1, fly.k + dt * 1.4);
+    const e = 1 - Math.pow(1 - fly.k, 3);
+    controls.target.lerpVectors(fly.fromT, fly.toT, e);
+    camera.position.lerpVectors(fly.fromP, fly.toP, e);
+    if (fly.k >= 1) fly = null;
+  }
+  // cu tab-ul ascuns cadrele vin rar: roboții recuperează distanța, pași mici ca să nu taie colțurile
+  for (let left = Math.min(raw, 10); left > 0; left -= 0.05) stepWalkers(t, Math.min(left, 0.05));
+  robots.forEach(r => animateRobot(r, t, dt));
+  if (!REDUCED) {
+    scan.position.y = 1.6 + Math.sin(t * 1.6) * 1.2;
+    towerRing.rotation.z = t * 0.4;
+  }
+  runSceneQueue(dt);
+  updateSceneObjects(dt);
+  // poarta: scena are prioritate; altfel galben cât timp un robot live salvează
+  const saving = [...walkers.values()].some(w => w.room === 'gate');
+  const gateColor = sceneGate === 'stop' ? C.cherry : sceneGate === 'scan' ? C.saffron : sceneGate === 'ok' ? C.pine : saving ? C.saffron : C.pine;
+  gateLightMat.color.setHex(gateColor); gateLightMat.emissive.setHex(gateColor);
+  scan.material.color.setHex(sceneGate === 'stop' ? C.cherry : C.pine);
+  // globul cabinei de internet: se aprinde și se rotește cât timp un robot caută
+  const surfing = [...walkers.values()].some(w => w.room === 'web' && !w.path.length);
+  globeMat.color.setHex(surfing ? C.saffron : C.pine); globeMat.emissive.setHex(surfing ? C.saffron : C.pine);
+  globeMat.emissiveIntensity = surfing ? 0.9 : 0.25;
+  if (!REDUCED) globe.rotation.y += surfing ? 0.04 : 0.004;
+  controls.update();
+  const far = camera.position.distanceTo(controls.target) > 36;
+  if (far !== labelsFar) { labelsFar = far; document.getElementById('labels').classList.toggle('far', far); }
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+// click (nu tragere) pe un robot de la birou: deschide skill-ul lui
+{
+  const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+  let down = null;
+  renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+  renderer.domElement.addEventListener('pointerup', e => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+    ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    ray.setFromCamera(ptr, camera);
+    const live = clickable;
+    const hit = ray.intersectObjects(live, true)[0];
+    if (!hit) return;
+    let o = hit.object; while (o && !o.userData.skill) o = o.parent;
+    if (o) UI.openPanel('skill', o.userData.skill);
+  });
+  renderer.domElement.addEventListener('pointermove', e => {
+    if (e.buttons) return;
+    ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    ray.setFromCamera(ptr, camera);
+    renderer.domElement.style.cursor = ray.intersectObjects(clickable, true).length ? 'pointer' : '';
+  });
+}
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight);
+});
+window.__aiosReady = true;
+document.getElementById('fallback').style.display = 'none';
+frame();
+</script>
+</body>
+</html>
