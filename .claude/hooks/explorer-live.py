@@ -291,6 +291,82 @@ def gather_hooks():
     return list(out.values())
 
 
+# ---------- routines (sarcini pe care Claude le face singur, la ore fixe) ----------
+# Taskurile programate din aplicația Claude stau în ~/.claude/scheduled-tasks/<id>/SKILL.md, dar fără program.
+# Programul îl prind din răspunsul uneltelor: după ce Claude le listează (scheduled-tasks sau RemoteTrigger pentru
+# routines în cloud), hook-ul PostToolUse salvează lista în explorer/live/routines.json.
+ROUTINES_CACHE = os.path.join(OUT, "routines.json")
+
+
+def json_in(text):
+    """Primul obiect sau listă JSON dintr-un text (răspunsurile pot avea un antet, de ex. „HTTP 200")."""
+    for i, ch in enumerate(text):
+        if ch in "[{":
+            try:
+                return json.JSONDecoder().raw_decode(text[i:])[0]
+            except ValueError:
+                continue
+    return None
+
+
+def response_text(resp):
+    if isinstance(resp, str):
+        return resp
+    if isinstance(resp, list):  # blocuri de conținut MCP
+        return "\n".join(b.get("text", "") for b in resp if isinstance(b, dict))
+    if isinstance(resp, dict):
+        if "content" in resp:
+            return response_text(resp["content"])
+        return json.dumps(resp)
+    return ""
+
+
+def cache_routines(ev):
+    tool, inp = ev.get("tool_name", ""), ev.get("tool_input") or {}
+    data = json_in(response_text(ev.get("tool_response")))
+    try:
+        cache = json.loads(read(ROUTINES_CACHE) or "{}")
+    except ValueError:
+        cache = {}
+    if tool.endswith("list_scheduled_tasks") and isinstance(data, list):
+        cache["local"] = [{
+            "id": t.get("taskId", ""), "title": t.get("title") or t.get("taskId", ""),
+            "description": t.get("description", ""), "schedule": t.get("schedule", ""),
+            "cron": t.get("cronExpression", ""), "enabled": t.get("enabled", True),
+            "next": t.get("nextRunAt", ""), "last": t.get("lastRunAt", ""),
+        } for t in data if isinstance(t, dict)]
+    elif tool == "RemoteTrigger" and inp.get("action") == "list" and isinstance(data, dict):
+        cache["cloud"] = [{
+            "id": t.get("id", ""), "title": t.get("name") or t.get("title") or t.get("id", ""),
+            "description": (t.get("job_config") or {}).get("prompt", "")[:160] if isinstance(t.get("job_config"), dict) else "",
+            "schedule": t.get("cron_expression") or t.get("schedule", ""), "cron": t.get("cron_expression", ""),
+            "enabled": t.get("enabled", True), "next": t.get("next_run_at", ""), "last": t.get("last_run_at", ""),
+        } for t in data.get("data", []) if isinstance(t, dict)]
+    else:
+        return
+    cache["updated"] = int(time.time())
+    write_atomic(ROUTINES_CACHE, json.dumps(cache, ensure_ascii=False))
+
+
+def gather_routines():
+    try:
+        cache = json.loads(read(ROUTINES_CACHE) or "{}")
+    except ValueError:
+        cache = {}
+    out = [dict(r, source="aplicația Claude") for r in cache.get("local", [])]
+    out += [dict(r, source="cloud") for r in cache.get("cloud", [])]
+    known = {r["id"] for r in out}
+    # taskuri locale care nu apar încă în listă: din fișiere, fără program
+    if "local" not in cache:
+        for p in sorted(glob.glob(os.path.expanduser("~/.claude/scheduled-tasks/*/SKILL.md"))):
+            fm = frontmatter(read(p))
+            tid = fm.get("name") or os.path.basename(os.path.dirname(p))
+            if tid not in known:
+                out.append({"id": tid, "title": tid, "description": fm.get("description", ""), "schedule": "",
+                            "cron": "", "enabled": None, "next": "", "last": "", "source": "aplicația Claude"})
+    return out
+
+
 # ---------- sesiuni ----------
 
 def update_session(ev):
@@ -472,6 +548,7 @@ def gather():
         "team": team,
         "connectors": gather_connectors(),
         "hooks": gather_hooks(),
+        "routines": gather_routines(),
         "recent": recent,
         "work": {"unsaved": unsaved[:30], "unsavedCount": len(unsaved)},
     }
@@ -483,6 +560,11 @@ def main():
     except ValueError:
         ev = {}
     os.makedirs(SESS, exist_ok=True)
+    if ev.get("hook_event_name") == "PostToolUse":
+        cache_routines(ev)
+        write_atomic(os.path.join(OUT, "data.js"),
+                     "window.AIOS_DATA = " + json.dumps(gather(), ensure_ascii=False, indent=1) + ";\n")
+        return
     update_session(ev)
     write_live()
     # data.js: la începutul/sfârșitul turei, la cerere, și altfel cel mult o dată la 10 s

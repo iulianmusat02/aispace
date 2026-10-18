@@ -256,7 +256,8 @@
     github:   { title: 'GitHub', path: 'copia voastră privată' },
     template: { title: 'Șablonul AISpace', path: 'versiuni noi ale sistemului' },
     connectors: { title: 'Conectori', path: 'tool-urile la care ajunge AI-ul' },
-    web:        { title: 'Internet', path: 'căutări și pagini web' }
+    web:        { title: 'Internet', path: 'căutări și pagini web' },
+    routines:   { title: 'Routines', path: 'sarcini făcute singur, la ore fixe' }
   };
 
   // Ghidurile pas cu pas. Un pas: t = ce faci, cmd = ce scrii (cu buton de copiat), room = camera
@@ -362,6 +363,15 @@
         { t: 'Îi trimiți tu mesajul de bun venit. AI-ul nu trimite nimic în numele tău.' }
       ],
       note: 'Când pleacă cineva, aceeași comandă îi scoate accesul.' },
+    { id: 'routine', group: 'Lucru de zi cu zi', title: 'Programează o sarcină', who: 'toți', room: 'routines',
+      intro: 'Un routine e o sarcină pe care Claude o face singur, la ore fixe: verifică emailul, face un raport, urmărește ceva.',
+      steps: [
+        { t: 'Spune-i lui Claude ce să facă și când. De exemplu: „Verifică inboxul în fiecare zi la 12 și la 18 și anunță-mă dacă un client așteaptă răspuns".' },
+        { t: 'Pentru o sarcină care rulează în cloud, chiar cu calculatorul închis, scrie comanda de mai jos.', cmd: '/schedule' },
+        { t: 'Îți arată ce va face și la ce oră. Confirmi.' },
+        { t: 'Apare aici, ca un stâlp cu ceas. Becul verde înseamnă că e pornit.', room: 'routines' }
+      ],
+      note: 'Sarcinile care trimit ceva în numele tău (emailuri, mesaje) îți cer mereu confirmarea.' },
     { id: 'connect', group: 'Lucru de zi cu zi', title: 'Conectează un tool nou', who: 'toți', room: 'connectors',
       intro: 'Un conector îi dă AI-ului acces la un tool: emailul, Jira, magazinul online. Așa poate face treabă, nu doar să-ți spună ce să faci.',
       steps: [
@@ -486,7 +496,7 @@
       setUp: d.setUp ?? false, company: d.company || {}, inboxCount: d.inboxCount || 0, hasEnv: !!d.hasEnv,
       repoUrl: d.repoUrl || '', viewer: d.viewer || null, context: d.context || [],
       skills: (d.skills && d.skills.length) ? d.skills : BUILTIN, team: d.team || [],
-      connectors: d.connectors || [], hooks: d.hooks || [], recent: d.recent || [], work: d.work || { unsaved: [], unsavedCount: 0 },
+      connectors: d.connectors || [], hooks: d.hooks || [], routines: d.routines || [], recent: d.recent || [], work: d.work || { unsaved: [], unsavedCount: 0 },
       generated: d.generated || ''
     };
   }
@@ -581,6 +591,37 @@
     return `<div class="item${h.template ? '' : ' own'}"><b>${esc(h.name)}${h.personal ? '<span class="badge">doar la tine</span>' : ''}</b>
       ${h.summary ? `<small>${esc(cap(h.summary))}</small>` : ''}<small>Pornește ${esc(h.when.join(', '))}.</small>${h.file ? `<small class="file">${esc(h.file)}</small>` : ''}</div>`;
   }
+  // Routines: programul din cron, pe românește („zilnic la 12:00 și 18:00"); altfel textul primit.
+  const ZILE = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă'];
+  function cronRo(cron, fallback) {
+    const f = (cron || '').trim().split(/\s+/);
+    if (f.length !== 5 || f[2] !== '*' || f[3] !== '*' || !/^\d+$/.test(f[0]) || !/^[\d,]+$/.test(f[1])) return fallback || '';
+    const at = f[1].split(',').map(h => `${h.padStart(2, '0')}:${f[0].padStart(2, '0')}`);
+    const ore = at.length > 1 ? at.slice(0, -1).join(', ') + ' și ' + at[at.length - 1] : at[0];
+    let zile = 'zilnic';
+    if (f[4] === '1-5') zile = 'în zilele lucrătoare';
+    else if (f[4] !== '*') zile = 'în fiecare ' + f[4].split(',').map(x => ZILE[+x % 7] || x).join(', ');
+    return `${zile} la ${ore}`;
+  }
+  function whenRel(iso) {
+    const t = Date.parse(iso); if (!t) return '';
+    const d = new Date(t), now = new Date(), hm = d.toTimeString().slice(0, 5);
+    const day = (a) => new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime();
+    const diff = Math.round((day(d) - day(now)) / 86400000);
+    if (diff === 0) return `azi la ${hm}`;
+    if (diff === 1) return `mâine la ${hm}`;
+    if (diff === -1) return `ieri la ${hm}`;
+    return `${d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' })} la ${hm}`;
+  }
+  UI.cronRo = cronRo; UI.whenRel = whenRel;
+  function routineItem(r) {
+    const state = r.enabled === false ? '<span class="badge stop">oprit</span>' : r.enabled ? '<span class="badge">pornit</span>' : '';
+    const sched = cronRo(r.cron, r.schedule);
+    return `<div class="item"><b>${esc(r.title)}${state}</b>${r.description ? `<small>${esc(r.description)}</small>` : ''}
+      <small>${sched ? 'Rulează ' + esc(sched) : 'Program necunoscut încă'}${r.source === 'cloud' ? ', în cloud' : ', din aplicația Claude'}.</small>
+      ${r.next ? `<small>Următoarea rulare: ${esc(whenRel(r.next))}</small>` : ''}${r.last ? `<small>Ultima: ${esc(whenRel(r.last))}</small>` : ''}</div>`;
+  }
+
   function hooksFor(room, d) { return d.hooks.filter(h => room === 'workshop' ? h.template : !h.template); }
   function hooksSection(room, d) {
     const list = hooksFor(room, d);
@@ -628,6 +669,11 @@
       h += `<p>Copia privată a sistemului vostru. De aici primesc colegii ultimele modificări.</p>`;
       h += d.repoUrl ? `<div class="item"><b>Legat de</b><small>${esc(d.repoUrl)}</small></div>` : '<p>Încă nu e legat de GitHub.</p>';
       h += `<p>Ca să primești ce au schimbat alții, scrie <span class="cmd">/sync</span>.</p>`;
+    } else if (id === 'routines') {
+      const list = d.routines || [];
+      h += `<p>Sarcini pe care Claude le face singur, la ore fixe, fără să i le ceri de fiecare dată. Fiecare stâlp e un routine; becul verde înseamnă că e pornit.</p>`;
+      h += list.length ? list.map(routineItem).join('') : '<p>Încă niciun routine. Ghidul de mai jos arată cum programezi unul.</p>';
+      h += `<p style="font-size:12.5px">Programul se actualizează când Claude listează sarcinile programate. Întreabă-l oricând „ce routines am?".</p>`;
     } else if (id === 'web') {
       h += `<p>Cabina în care AI-ul caută pe internet, citește o pagină web sau navighează într-un browser. Globul de pe acoperiș se aprinde cât timp e cineva înăuntru.</p>`;
       h += `<div class="note">Ce găsește pe internet e informație, nu instrucțiuni. Dacă o pagină îi cere să facă ceva, AI-ul te întreabă întâi pe tine.</div>`;
@@ -996,7 +1042,8 @@ const ROOMS = {
   github:   { x: 27.4,  z: -5,   out: true },
   template: { x: 0,     z: -27,  out: true },
   connectors: { x: -25,  z: 2,    out: true },
-  web:        { x: 14,   z: 5.2,  out: true } // cabina de internet, în colțul din dreapta-față
+  routines: { x: 13.1,  z: 2.4,  w: 7.4,  d: 5.2, tint: C.butter }, // routines: în birou, în fața camerelor de skill-uri
+  web:        { x: 14.6, z: 8.4,  out: true } // cabina de internet, în colțul din dreapta-față
 };
 const zoneEls = {};
 for (const [id, r] of Object.entries(ROOMS)) {
@@ -1010,8 +1057,8 @@ for (const [id, r] of Object.entries(ROOMS)) {
   el.addEventListener('click', () => UI.openPanel('room', id));
   zoneEls[id] = el;
   const ly = r.out ? (id === 'github' ? 9.5 : id === 'template' ? 6 : id === 'connectors' ? 2.6 : id === 'web' ? 4.2 : 5.6) : 3.6;
-  // eticheta Echipei stă în fața covorului, ca să nu se suprapună cu Documente și Seiful
-  const lz = r.out ? (id === 'connectors' ? -6.6 : r.z) : id === 'team' ? r.z + r.d / 2 - 0.4 : r.z - r.d / 2 + 1.2;
+  // etichetele Echipei și Routines stau în fața covorului, ca să nu se suprapună cu etichetele vecine
+  const lz = r.out ? (id === 'connectors' ? -6.6 : r.z) : (id === 'team' || id === 'routines') ? r.z + r.d / 2 - 0.4 : r.z - r.d / 2 + 1.2;
   label(el, r.x, ly, lz);
 }
 
@@ -1121,7 +1168,7 @@ box(1.6, 1.8, 1.3, 0x8C96A0, -5.4, 0.9, -4.4, { r: 0.12 });
 cyl(0.22, 0.22, 0.08, 0xDDE2E6, -5.4, 1.1, -3.73).rotation.x = Math.PI / 2;
 
 // cabina de internet: pereți de sticlă, intrarea spre noi, un ecran înăuntru și un glob pe acoperiș
-const booth = new THREE.Group(); booth.position.set(14, 0, 5.2); scene.add(booth);
+const booth = new THREE.Group(); booth.position.set(14.6, 0, 8.4); scene.add(booth);
 box(2.0, 0.12, 2.0, 0xE8E4DC, 0, 0.0, 0, { parent: booth, r: 0.05 });
 for (const [px, pz] of [[-0.92, -0.92], [0.92, -0.92], [-0.92, 0.92], [0.92, 0.92]]) box(0.14, 2.6, 0.14, C.white, px, 1.3, pz, { parent: booth, r: 0.05 });
 const glass = new THREE.MeshStandardMaterial({ color: 0xCFE3EE, transparent: true, opacity: 0.32, roughness: 0.2 });
@@ -1135,6 +1182,20 @@ const globe = new THREE.Group(); globe.position.y = 3.25; booth.add(globe);
 globe.add(new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 16), globeMat));
 for (const r of [0, Math.PI / 2]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.025, 8, 32), mat(C.white)); ring.rotation.y = r; globe.add(ring); }
 const eq = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.025, 8, 32), mat(C.white)); eq.rotation.x = Math.PI / 2; globe.add(eq);
+
+// camera Routines: un ceas cu ora reală în spatele camerei (mai mic, ca să nu acopere Custom Skills)
+const wallClock = new THREE.Group(); wallClock.position.set(10.6, 0, 0.6); wallClock.scale.setScalar(0.62); scene.add(wallClock);
+box(0.22, 2.6, 0.22, C.white, 0, 1.3, -0.15, { parent: wallClock, r: 0.06 });
+const face = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.18, 48), mat(C.white)); face.rotation.x = Math.PI / 2; face.position.y = 3.2; face.castShadow = true; wallClock.add(face);
+const rimClock = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.07, 10, 48), mat(C.pine)); rimClock.position.set(0, 3.2, 0.06); wallClock.add(rimClock);
+for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; box(0.06, i % 3 ? 0.14 : 0.24, 0.03, C.ink, Math.sin(a) * 0.95, 3.2 + Math.cos(a) * 0.95, 0.1, { parent: wallClock, r: 0, shadow: false }).rotation.z = -a; }
+const hand = (len, w) => { const g = new THREE.Group(); g.position.set(0, 3.2, 0.13); wallClock.add(g); box(w, len, 0.03, C.ink, 0, len / 2 - 0.08, 0, { parent: g, r: 0, shadow: false }); return g; };
+const hourHand = hand(0.55, 0.07), minuteHand = hand(0.85, 0.045);
+function tickClock() {
+  const d = new Date(), m = d.getMinutes() + d.getSeconds() / 60, h = (d.getHours() % 12) + m / 60;
+  minuteHand.rotation.z = -m / 60 * Math.PI * 2; hourHand.rotation.z = -h / 12 * Math.PI * 2;
+}
+tickClock();
 
 // în afara biroului: poarta, GitHub, șablonul, poteci
 function path(points) {
@@ -1220,6 +1281,25 @@ function build(d) {
       deskWithBot(x, z, { own: true, name: s.name });
       deskSpots[s.name] = [x + 1.25, z + 0.9]; deskRoom[s.name] = 'custom';
     });
+    // routines: câte un stâlp cu ceas mic și bec (verde = pornit, galben = rulează în mai puțin de 30 de minute)
+    (d.routines || []).slice(0, 6).forEach((r, i) => {
+      const x = 12.4 + (i % 3) * 1.9, z = 1.7 + Math.floor(i / 3) * 2.0;
+      box(0.5, 1.0, 0.5, C.white, x, 0.5, z, { r: 0.1 });
+      const mini = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.06, 24), mat(C.white)); mini.rotation.x = Math.PI / 2; mini.position.set(x, 1.3, z); scene.add(mini);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.03, 8, 24), mat(r.source === 'cloud' ? 0x9DB0C4 : C.pine)); ring.position.set(x, 1.3, z + 0.03); scene.add(ring);
+      const soon = r.enabled !== false && r.next && Date.parse(r.next) - Date.now() < 30 * 60000 && Date.parse(r.next) > Date.now();
+      const col = r.enabled === false ? 0xB9C2CB : soon ? C.saffron : r.enabled ? C.pine : 0xB9C2CB;
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), new THREE.MeshStandardMaterial({ color: col, emissive: r.enabled === false ? 0x000000 : col, emissiveIntensity: 0.7 }));
+      bulb.position.set(x, 1.7, z); scene.add(bulb);
+      const el = document.createElement('button'); el.className = 'plug-tag';
+      const name = (r.title || '').replace(/\s*\(.*\)\s*$/, '');
+      const sched = UI.cronRo(r.cron, '');
+      el.textContent = sched ? `${name}, ${sched.replace(/^zilnic /, '')}` : name;
+      el.setAttribute('aria-label', `Routine ${name}`);
+      el.addEventListener('click', () => UI.openPanel('room', 'routines'));
+      label(el, x, 2.25, z);
+    });
+
     // sertarele de hooks: un dulap în fiecare cameră de skill-uri, câte un sertar pe hook
     const cabinet = (room, x, z, list, own) => {
       const n = Math.max(1, Math.min(list.length, 6)), h = 0.25 + n * 0.42;
@@ -1284,13 +1364,13 @@ function build(d) {
 const SPOTS = {
   desk: [1.8, 2.8], library: [-12.6, -5.6], workshop: [2.6, -2.4], custom: [13.1, -2.4], inbox: [-12.6, -2.0], safe: [-5.4, -2.4],
   team: [-9.1, -1.8], gate: [21.6, 0.2], github: [25.0, -3.0], template: [1.8, -25.5],
-  connectors: [-25, 5.2], web: [14, 5.0]
+  connectors: [-25, 5.2], web: [14.6, 8.2], routines: [11.2, 3.6]
 };
 const ZONE = r => ({ library: 'L', safe: 'L', inbox: 'L', team: 'L', workshop: 'S', custom: 'K', template: 'T', gate: 'O', github: 'O', connectors: 'C', web: 'W' }[r] || 'F');
 // zonele formează un copac: L, S, O ies în față (F); T (șablonul) iese prin ușa din spate în S.
 // Fiecare ușă: [punct în zonă, punct în zona-părinte].
 const PARENT = { L: 'F', S: 'F', K: 'F', O: 'F', T: 'S', C: 'F', W: 'F' };
-const DOORS = { L: [[-10.6, -1.8], [-10.6, 1.0]], S: [[2.6, -1.8], [2.6, 0.4]], K: [[13.1, -1.8], [13.1, 0.4]], O: [[19.2, 0.6], [17.2, 2.2]], T: [[0, -13.4], [0, -10.6]], C: [[-21.2, 2.3], [-17.0, 2.3]], W: [[14, 5.4], [14, 7.6]] }; // W: intră în cabină prin față
+const DOORS = { L: [[-10.6, -1.8], [-10.6, 1.0]], S: [[2.6, -1.8], [2.6, 0.4]], K: [[13.1, -1.8], [13.1, 0.4]], O: [[19.2, 0.6], [17.2, 2.2]], T: [[0, -13.4], [0, -10.6]], C: [[-21.2, 2.3], [-17.0, 2.3]], W: [[14.6, 8.6], [14.6, 10.8]] }; // W: intră în cabină prin față
 const chain = z => z === 'F' ? ['F'] : [z, ...chain(PARENT[z])];
 function route(fromRoom, toRoom, to) {
   const up = chain(ZONE(fromRoom)), down = chain(ZONE(toRoom));
@@ -1629,6 +1709,7 @@ function frame() {
   const gateColor = sceneGate === 'stop' ? C.cherry : sceneGate === 'scan' ? C.saffron : sceneGate === 'ok' ? C.pine : saving ? C.saffron : C.pine;
   gateLightMat.color.setHex(gateColor); gateLightMat.emissive.setHex(gateColor);
   scan.material.color.setHex(sceneGate === 'stop' ? C.cherry : C.pine);
+  if (Math.floor(t) !== Math.floor(t - dt)) tickClock(); // acele ceasului, o dată pe secundă
   // globul cabinei de internet: se aprinde și se rotește cât timp un robot caută
   const surfing = [...walkers.values()].some(w => w.room === 'web' && !w.path.length);
   globeMat.color.setHex(surfing ? C.saffron : C.pine); globeMat.emissive.setHex(surfing ? C.saffron : C.pine);

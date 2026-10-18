@@ -96,6 +96,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__scheduled-tasks__list_scheduled_tasks|RemoteTrigger",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/explorer-live.py",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }
