@@ -2,7 +2,8 @@
 # Pe scurt: după fiecare răspuns, salvează și publică modificările contextului (doar la owner-i) și aduce ce au schimbat colegii.
 # Stop hook pentru repo-urile firmelor care folosesc AISpace (trunk-based, un singur main).
 # După fiecare tură, DOAR un owner (vezi „Poate face push" în fișa lui):
-#   1. comite my-context/ și .claude/skills/ (assets/ rămâne în afara git prin .gitignore),
+#   1. comite contextul: my-context/, team/, .claude/skills/, plus .gitignore și .claude/template-manifest.txt
+#      (scrise o dată, la /install; assets/ și TASKS.md rămân în afara git prin .gitignore),
 #   2. aduce ce a publicat altcineva (merge),
 #   3. publică. La conflict: oprește merge-ul și îi cere lui Claude să urmeze
 #      reference/sync-conflicts.md (userul alege când informațiile se contrazic).
@@ -20,7 +21,7 @@ git remote get-url origin >/dev/null 2>&1 || exit 0
 
 say() { printf '{"systemMessage": "%s"}\n' "$1"; }
 
-PATHS=(); for d in my-context .claude/skills; do [ -d "$d" ] && PATHS+=("$d"); done   # git add pică dacă o cale lipsește
+PATHS=(); for d in my-context team .claude/skills .gitignore .claude/template-manifest.txt; do [ -e "$d" ] && PATHS+=("$d"); done   # git add pică dacă o cale lipsește
 [ ${#PATHS[@]} -gt 0 ] || exit 0
 
 # --- doar owner-ii publică: emailul din git trebuie să apară într-o fișă cu „Poate face push: da"
@@ -36,14 +37,14 @@ is_owner() {
 }
 if ! is_owner; then
   [ -n "$(git status --porcelain -- "${PATHS[@]}" 2>/dev/null)" ] && \
-    say "Nu ești owner: modificările din my-context/ rămân doar pe calculatorul tău. Spune-i unui owner să le publice."
+    say "Nu ești owner: modificările contextului rămân doar pe calculatorul tău. Spune-i unui owner să le publice."
   exit 0
 fi
 
 # --- stage + verifică că în index nu e nimic în afară de căile permise
 git add -A -- "${PATHS[@]}" >/dev/null 2>&1
-if git diff --cached --name-only | grep -Ev '^(my-context|\.claude/skills)/' | grep -q .; then
-  say "Sincronizare oprită: ai fișiere pregătite pentru commit în afara my-context/ și .claude/skills/. Comite-le sau scoate-le din staging."
+if git diff --cached --name-only | grep -Ev '^(my-context/|team/|\.claude/skills/|\.gitignore$|\.claude/template-manifest\.txt$)' | grep -q .; then
+  say "Sincronizare oprită: ai fișiere pregătite pentru commit în afara contextului (my-context/, team/, .claude/skills/). Comite-le sau scoate-le din staging."
   exit 0
 fi
 
@@ -60,7 +61,7 @@ fi
 
 # --- trunk-based: întâi pull (merge), apoi push
 BR=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
-git fetch -q origin >/dev/null 2>&1 || { say "my-context/ salvat local; nu am putut contacta GitHub. Se reîncearcă la tura următoare."; exit 0; }
+git fetch -q origin >/dev/null 2>&1 || { say "Contextul e salvat local; nu am putut contacta GitHub. Se reîncearcă la tura următoare."; exit 0; }
 
 if git rev-parse -q --verify "origin/$BR" >/dev/null 2>&1; then
   BEHIND=$(git rev-list --count "HEAD..origin/$BR")
@@ -81,7 +82,7 @@ if git rev-parse -q --verify "origin/$BR" >/dev/null 2>&1; then
 fi
 
 if git push -q origin HEAD >/dev/null 2>&1; then
-  say "my-context/ publicat pe GitHub."
+  say "Contextul firmei a fost publicat pe GitHub."
 else
   say "Publicarea a eșuat (rețea, permisiuni sau altcineva a publicat între timp). Se reîncearcă la tura următoare."
 fi

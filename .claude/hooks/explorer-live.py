@@ -41,9 +41,13 @@ def git(*args):
 
 
 def person():
-    # numele din „## Me" (my-context/profile.md, ex. **Iulian**), altfel userul git
-    me = re.search(r"^## Me\s*\n+\*\*([^*]+)\*\*", read(os.path.join(ROOT, "my-context/profile.md")), re.M)
-    return (me.group(1).strip() if me else "") or git("config", "user.name") or os.environ.get("USER", "")
+    """Numele din „## Me" (my-context/profile.md): „**Iulian** — ..." sau „Iulian, co-fondator ..."; altfel userul git."""
+    me = section(read(os.path.join(ROOT, "my-context/profile.md")), "Me")
+    first = next((l.strip() for l in re.sub(r"<!--.*?-->", "", me, flags=re.S).splitlines()
+                  if l.strip() and not l.strip().startswith("-")), "")
+    m = re.match(r"\*\*([^*]+)\*\*", first) or re.match(r"([^,—–(]+)", first)
+    name = m.group(1).strip() if m else ""
+    return (name if 0 < len(name) <= 40 else "") or git("config", "user.name") or os.environ.get("USER", "")
 
 
 # ---------- unde merge robotul ----------
@@ -488,10 +492,20 @@ def skill_entry(name, desc, template):
 def gather():
     team_text = read(os.path.join(ROOT, "team/profile.md"))
     me_text = read(os.path.join(ROOT, "my-context/profile.md"))
-    comp = [l for l in section(team_text, "Compania").splitlines() if l.strip()]
+    # Contextul firmei poate sta în team/ (spațiu comun) sau, după /install, în my-context/: le citesc pe amândouă.
+    comp = [l for l in section(team_text, "Compania").splitlines() if l.strip() and not l.strip().startswith("<!--")]
     company_line = strip_md(comp[0]) if comp else ""
-    company = {"name": re.split(r"\s+[—-]\s+", company_line, 1)[0] if company_line else "",
-               "about": company_line}
+    company_name = re.split(r"\s+[—-]\s+", company_line, 1)[0] if company_line else ""
+    if not company_name:  # altfel: primul proiect mare (la o firmă mică e chiar firma)
+        for text, base in ((team_text, "team"), (me_text, "my-context")):
+            rows = table_rows(section(text, "Projects").split("### Module")[0])
+            if rows and rows[0] and rows[0][0]:
+                slug = rows[0][0]
+                card = read(os.path.join(ROOT, f"{base}/projects/{slug}.md"))
+                t = re.search(r"^# (.+)$", card, re.M)
+                company_name, company_line = (strip_md(t.group(1)) if t else slug), (rows[0][1] if len(rows[0]) > 1 else "")
+                break
+    company = {"name": company_name, "about": company_line}
 
     manifest = read(os.path.join(ROOT, ".claude/template-manifest.txt"))
     skills = []
@@ -510,20 +524,31 @@ def gather():
         skills.append(e)
 
     context = []
-    for p in ["team/profile.md", *sorted(glob.glob(os.path.join(ROOT, "team/projects/*.md"))), "my-context/profile.md"]:
+    for p in ["team/profile.md", *sorted(glob.glob(os.path.join(ROOT, "team/projects/*.md"))), "my-context/profile.md",
+              *sorted(glob.glob(os.path.join(ROOT, "my-context/projects/*.md"))), *sorted(glob.glob(os.path.join(ROOT, "my-context/context/*.md")))]:
         p = p if os.path.isabs(p) else os.path.join(ROOT, p)
         if os.path.isfile(p):
             context.append(md_info(p))
 
-    team = []
-    for row in table_rows(section(team_text, "People")):
-        if not row or not row[0]:
-            continue
-        name = re.sub(r"^\(Eu\)\s*", "", row[0])
-        slug = re.sub(r"[^a-z0-9-]", "", name.lower().replace(" ", "-"))
-        card = read(os.path.join(ROOT, f"team/people/{slug}.md"))
-        admin = bool(re.search(r"Poate face push:?\*?\*?:? *da", card, re.I))
-        team.append({"name": name, "role": row[1] if len(row) > 1 else "", "admin": admin})
+    # echipa: tabelele People din team/profile.md și my-context/profile.md, fișele din team/people/ sau my-context/people/
+    push_da = re.compile(r"Poate face push:?\*?\*?:? *da", re.I)
+    team, seen = [], set()
+    for text in (team_text, me_text):
+        for row in table_rows(section(text, "People")):
+            if not row or not row[0]:
+                continue
+            me_row = row[0].startswith("(Eu)")
+            name = re.sub(r"^\(Eu\)\s*", "", row[0]).strip()
+            slug = re.sub(r"[^a-z0-9-]", "", name.lower().replace(" ", "-"))
+            card = read(os.path.join(ROOT, f"team/people/{slug}.md")) or read(os.path.join(ROOT, f"my-context/people/{slug}.md"))
+            t = re.search(r"^# (.+)$", card, re.M)
+            if t and re.fullmatch(r"[a-z0-9-]+", name):  # rândul are doar slug-ul ([[costel-musat]]): iau numele din fișă
+                name = strip_md(t.group(1))
+            if name.lower() in seen:
+                continue
+            seen.add(name.lower())
+            admin = bool(push_da.search(card)) or (me_row and bool(push_da.search(section(me_text, "Me"))))
+            team.append({"name": name, "role": row[1] if len(row) > 1 else "", "admin": admin})
 
     recent = []
     for l in git("log", "-6", "--date=short", "--format=%ad\t%an\t%s").splitlines():

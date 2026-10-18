@@ -38,10 +38,13 @@ Nu dictez cuvinte de răspuns; buclele de continuare sunt mereu AskUserQuestion 
 | 1 | **Skill** în `.claude/skills/<slug>/SKILL.md` | Orice logică repetabilă: pașii, regulile, formatul rezultatului. Aproape fiecare proces primește unul, ca să-l pot rula la cerere. |
 | 2 | **MCP / conector existent** | Tool-ul are conector (vezi „Cum găsesc conectorul" mai jos). |
 | 3 | **API direct** | Nu există MCP, dar există API oficial. Documentația o citesc acum, nu din memorie; cheia merge în `.env` (placeholder și în `.env.example`), niciodată în chat sau în cod. |
-| 4 | **Extensia Claude în Chrome** | Nu există nici conector, nici API utilizabil, doar interfață web. Se folosește sesiunea deja logată a userului; nu introduc parole, nu trec de CAPTCHA, cer confirmare înainte de orice trimitere sau ștergere. |
+| 4 | **Extensia Claude în Chrome** | Nu există nici conector, nici API utilizabil, doar interfață web. Se folosește sesiunea deja logată a userului; nu introduc parole, nu trec de CAPTCHA, cer confirmare înainte de orice trimitere sau ștergere. Când o propun, o explic pe scurt ca la `/install` (pasul 5) și spun cât costă. |
 | 5 | **Rămâne manual** | Pasul cere judecată sau acțiune pe care userul vrea să o păstreze. Spun clar care și de ce. |
 
 ### Cum găsesc conectorul
+
+Pentru fiecare conector propus spun și **cât costă**, citit acum din sursa oficială: conectorul (gratuit / plătit, de la cât / gratuit până la o limită), separat de abonamentul tool-ului în sine; ce nu pot verifica marchez „cost neverificat”. Dacă e oferit de o firmă terță, o spun.
+
 
 Caut eu, nu întreb din reflex. Verific, în ordine:
 1. **Ce am deja**: tool-urile MCP din sesiune (conectate sau în lista celor care cer autentificare) și tabelele „Tools" din `my-context/profile.md` și `team/profile.md`.
