@@ -21,6 +21,7 @@ Din răspunsuri generează `my-context/profile.md`, `my-context/TASKS.md` și, u
 | `CLAUDE.md` | ✅ | Doar regulile care se aplică mereu + check-ul de onboarding + tabelul „când citesc ce" (se încarcă la fiecare sesiune, deci ținut mic) |
 | `reference/` | ✅ | Detaliile din spatele regulilor (workflow task-uri, personal vs. echipă, skill-uri/playbook-uri, dashboard, compliance furnizori) — citite doar când subiectul apare |
 | `templates/` | ✅ | Șabloane pentru profil, oameni, proiecte, context, task-uri, skill-uri |
+| `.agents/skills/adapt-to-codex/` | ✅ | Skill rulat în Codex: generează local `AGENTS.md` și `.agents/skills/` din `CLAUDE.md` și `.claude/skills/` (rămân în `.gitignore`) |
 | `.claude/skills/` | ✅ | Comenzile `/install`, `/planning`, `/process`, `/recommend-process`, `/guide`, `/add-context`, `/sync`, `/history`, `/add-teammate`, `/update-template` și `/quiz` (legenda lor e în dashboard, pagina „Comenzi") |
 | `playbooks/` | ✅ | Rețete reutilizabile pentru cereri comune de automatizare de la clienți (ex. Instagram DM, WhatsApp, chatbot pe site) — cunoaștere generică, nu date personale |
 | `dashboard.html` | ✅ | Unealtă generică, read-only — citesc fișierele locale direct, fără server. Nicio modificare (task-uri, oameni, proiecte) nu se face din dashboard; toate vin din sesiunile de Claude Code |

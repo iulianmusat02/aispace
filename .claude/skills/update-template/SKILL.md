@@ -9,9 +9,9 @@ description: Aduce în repo-ul firmei o versiune nouă a șablonului AISpace. Î
 
 ## Ce se actualizează și ce nu
 
-- **Se poate actualiza** (livrat cu șablonul): `CLAUDE.md`, `README.md`, `dashboard.html`, `reference/`, `templates/`, `playbooks/`, `scripts/template-manifest.sh`, `.claude/hooks/`, `.claude/settings.json` și skill-urile livrate (install, planning, process, recommend-process, quiz, guide, add-context, sync, history, add-teammate, update-template). `create-skill` nu mai e livrat (a fost unit cu `process`): dacă firma îl are și e nemodificat față de manifest, propun să-l șterg; dacă e modificat, îl las și spun că `/process` face acum același lucru.
+- **Se poate actualiza** (livrat cu șablonul): `CLAUDE.md`, `README.md`, `dashboard.html`, `reference/`, `templates/`, `playbooks/`, `scripts/template-manifest.sh`, `.claude/hooks/`, `.claude/settings.json`, `.agents/skills/adapt-to-codex/` și skill-urile livrate (install, planning, process, recommend-process, quiz, guide, add-context, sync, history, add-teammate, update-template). `create-skill` nu mai e livrat (a fost unit cu `process`): dacă firma îl are și e nemodificat față de manifest, propun să-l șterg; dacă e modificat, îl las și spun că `/process` face acum același lucru.
 - **`.gitignore`**: în șablon conține blocul `AISPACE-TEMPLATE-ONLY` (contextul ignorat), pe care `scripts/firm-mode.sh` l-a scos la `/install`. Nu îl readuc niciodată: compar doar regulile din afara blocului și propun doar regulile noi de acolo.
-- **Nu se atinge niciodată**: `my-context/`, `team/`, `.env*`, `.claude/runtime/`, skill-urile create de firmă (orice alt folder din `.claude/skills/`), scripturile firmei.
+- **Nu se atinge niciodată**: `AGENTS.md` și restul din `.agents/` (generate local de `adapt-to-codex`, în `.gitignore`), `my-context/`, `team/`, `.env*`, `.claude/runtime/`, skill-urile create de firmă (orice alt folder din `.claude/skills/`), scripturile firmei.
 - `.claude/template-manifest.txt` ține amprenta (sha256) fiecărui fișier așa cum a fost livrat; așa aflu ce a modificat firma. Prima linie, `# source:`, e adresa șablonului.
 
 ## 1. Pregătire
@@ -41,3 +41,5 @@ Arăt întâi un rezumat (câte fișiere în fiecare categorie), apoi parcurg do
 ## 4. Încheiere
 
 După aplicare: regenerez `.claude/template-manifest.txt` pentru fișierele luate din șablon (cele păstrate de firmă își păstrează vechea amprentă, ca să rămână marcate ca modificate), rulez o verificare simplă (fișierele JSON/`bash -n` pe hook-uri) și spun clar ce s-a schimbat, în termeni de business. Modificările se publică prin sincronizarea obișnuită. Șterg folderul temporar.
+
+**Dacă rulez în Codex** (nu în Claude Code), ultimul pas e să invoc `adapt-to-codex`: `CLAUDE.md` și skill-urile tocmai s-au schimbat, deci `AGENTS.md` și `.agents/skills/` trebuie regenerate. Rezultatul rămâne local, nu se urmărește și nu se publică.

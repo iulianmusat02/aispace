@@ -20,6 +20,13 @@
 # Setările Claude Code doar pentru acest calculator.
 /.claude/settings.local.json
 
+# Adaptarea pentru Codex: AGENTS.md și skill-urile convertite se generează local de skill-ul
+# adapt-to-codex din CLAUDE.md și .claude/skills/. Singurul livrat în repo e adapt-to-codex.
+/AGENTS.md
+/.agents/skills/*
+!/.agents/skills/adapt-to-codex/
+/.agents/.adapted-manifest.txt
+
 # Biroul 3D: starea sesiunilor și datele generate de .claude/hooks/explorer-live.py.
 # Se rescriu la fiecare pas; sunt locale.
 /explorer/live/

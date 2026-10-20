@@ -17,6 +17,7 @@ Profilele sunt indexul; detaliile stau în fișiere separate pe care le citesc d
 | Apare o persoană sau un proiect | `team/people/<slug>.md`, `team/projects/<slug>.md` (slug din tabelele din `team/profile.md`) |
 | Decid dacă ceva nou e personal sau pentru echipă | `reference/personal-vs-team.md` |
 | Cine poate ce (owner/membru), verificarea rolului | `reference/roluri.md` |
+| Proiectul se folosește din Codex | `.agents/skills/adapt-to-codex/SKILL.md` (rulat în Codex; generează AGENTS.md și skill-urile pentru Codex, locale) |
 | Hook-ul de sync raportează conflicte, sau se întreabă cum se publică contextul | `reference/sync-conflicts.md` |
 | Cerere de automatizare/conectare pentru un client, sau „e sigur tool-ul X cu date de client?" | skill-ul `/process` (`.claude/skills/process/SKILL.md`), care folosește `reference/compliance.md` |
 | Creez/actualizez un skill învățat sau un playbook | `reference/skills-and-playbooks.md` |
