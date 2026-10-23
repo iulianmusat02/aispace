@@ -1,4 +1,4 @@
-# AISpace
+# Sistemul de operare AI
 
 **Spațiul de lucru AI al firmei tale.** Îi explici o singură dată ce face firma, cine lucrează cu tine și cum lucrați. De acolo, AI-ul ține minte, face treaba și automatizează ce se repetă.
 
