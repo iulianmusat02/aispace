@@ -2315,15 +2315,26 @@
       el.innerHTML = html;
     }
     let connectorsTimer = null;
+    // Cu folderul conectat, data.js îl citesc din el (JSON după `window.AIOS_DATA = `, parsat, nu executat),
+    // ca lista să fie a proiectului conectat chiar dacă serverul rulează din alt folder.
+    async function readFolderLiveData() {
+      try {
+        const live = await (await memoryDirHandle.getDirectoryHandle('explorer')).getDirectoryHandle('live');
+        const text = await (await (await live.getFileHandle('data.js')).getFile()).text();
+        const m = text.match(/^\s*window\.\w+\s*=\s*([\s\S]*?);?\s*$/);
+        return m ? JSON.parse(m[1]) : null;
+      } catch (e) { return null; }
+    }
     function loadConnectors() {
-      const sc = document.createElement('script');
-      sc.src = 'explorer/live/data.js?t=' + Date.now();
-      sc.onload = sc.onerror = () => {
-        sc.remove();
+      const next = () => {
         renderConnectors();
         clearTimeout(connectorsTimer);
         if (activeMainTab === 'connectors') connectorsTimer = setTimeout(loadConnectors, 20000);
       };
+      if (memoryDirHandle) { readFolderLiveData().then(d => { window.AIOS_DATA = d; next(); }); return; }
+      const sc = document.createElement('script');
+      sc.src = 'explorer/live/data.js?t=' + Date.now();
+      sc.onload = sc.onerror = () => { sc.remove(); next(); };
       document.head.appendChild(sc);
     }
 

@@ -516,7 +516,9 @@
   // Dashboard-ul păstrează accesul la folder în IndexedDB ('productivity-dashboard' / 'handles' / 'memoryDir').
   // Biroul e pe aceeași adresă, deci îl refolosește: din folder citește tot ce ține de proiect, la câteva secunde.
   // Din hook (live/data.js) rămân doar lucrurile din afara folderului: conectori, routines, istoric git.
-  let rootHandle = null, folderData = null;
+  // Și fișierele hook-ului (explorer/live/) le citesc din folderul conectat, nu de pe server: altfel, cu serverul
+  // pornit din alt folder (de exemplu din șablon), biroul ar amesteca firma conectată cu sesiunile altui proiect.
+  let rootHandle = null, folderData = null, folderOk = false;
   function idbHandle() {
     return new Promise(resolve => {
       try {
@@ -543,6 +545,13 @@
     try { return await (await d.getFileHandle(name)).getFile().then(f => f.text()); } catch (e) { return null; }
   }
   async function exists(path) { return (await readText(path)) !== null; }
+  // explorer/live/*.js sunt JSON după `window.X = `: le parsez, nu le execut
+  async function readLive(file, key) {
+    const t = await readText('explorer/live/' + file);
+    const m = t && t.match(/^\s*window\.\w+\s*=\s*([\s\S]*?);?\s*$/);
+    if (!m) return false;
+    try { window[key] = JSON.parse(m[1]); return true; } catch (e) { return false; }
+  }
   async function list(path, kind) {
     const d = await dirAt(path); if (!d) return [];
     const out = [];
@@ -663,7 +672,11 @@
     let perm = 'denied';
     try { perm = await rootHandle.queryPermission({ mode: 'read' }); if (perm !== 'granted' && interactive) perm = await rootHandle.requestPermission({ mode: 'read' }); } catch (e) {}
     $('folderPill').style.display = perm === 'granted' ? 'none' : 'flex';
-    return perm === 'granted';
+    const was = folderOk;
+    folderOk = perm === 'granted';
+    // abia s-a conectat folderul: reîncarc imediat datele hook-ului din el
+    if (folderOk && !was) { pollData(); pollLive(); }
+    return folderOk;
   }
   async function pollFolder() {
     try {
@@ -679,21 +692,31 @@
     const sig = JSON.stringify(merged);
     if (sig !== dataSig || !UI.data) { dataSig = sig; UI.data = normalizeData(merged); renderChrome(); UI.emit('data', UI.data); }
   }
+  // Cu folderul conectat citesc din el; fără, din server (merge doar dacă serverul rulează din proiect).
+  // Un fișier lipsă din folder înseamnă „nimic încă", nu „ia-l de pe server".
+  let dataTimer = null;
   function pollData() {
-    load('live/data.js', () => { refreshData(); setTimeout(pollData, 20000); });
+    clearTimeout(dataTimer);
+    const done = () => { refreshData(); clearTimeout(dataTimer); dataTimer = setTimeout(pollData, 20000); };
+    if (folderOk) readLive('data.js', 'AIOS_DATA').then(ok => { if (!ok) window.AIOS_DATA = {}; done(); });
+    else load('live/data.js', done);
   }
-  let liveFails = 0, liveSig = '';
+  let liveFails = 0, liveSig = '', liveTimer = null;
   function pollLive() {
-    load('live/live.js', ok => {
-      liveFails = ok ? 0 : liveFails + 1;
-      const all = ((window.AIOS_LIVE || {}).sessions || []);
-      const now = Date.now() / 1000;
-      // Doar Claude, deocamdată. Sesiunile tăcute de peste 3 ore le consider închise.
-      const sessions = all.filter(s => (s.app || 'claude') === 'claude' && now - (s.last || 0) < 3 * 3600);
-      const sig = JSON.stringify(sessions);
-      if (sig !== liveSig) { liveSig = sig; UI.live = { sessions }; renderNow(); UI.emit('live', UI.live); }
-      setTimeout(pollLive, liveFails > 3 ? 15000 : 1500);
-    });
+    clearTimeout(liveTimer);
+    if (folderOk) readLive('live.js', 'AIOS_LIVE').then(ok => { if (!ok) window.AIOS_LIVE = { sessions: [] }; liveDone(true); });
+    else load('live/live.js', liveDone);
+  }
+  function liveDone(ok) {
+    liveFails = ok ? 0 : liveFails + 1;
+    const all = ((window.AIOS_LIVE || {}).sessions || []);
+    const now = Date.now() / 1000;
+    // Doar Claude, deocamdată. Sesiunile tăcute de peste 3 ore le consider închise.
+    const sessions = all.filter(s => (s.app || 'claude') === 'claude' && now - (s.last || 0) < 3 * 3600);
+    const sig = JSON.stringify(sessions);
+    if (sig !== liveSig) { liveSig = sig; UI.live = { sessions }; renderNow(); UI.emit('live', UI.live); }
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(pollLive, liveFails > 3 ? 15000 : 1500);
   }
 
   // ---------- bara de sus ----------
